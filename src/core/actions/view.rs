@@ -1,15 +1,17 @@
 use clap::ArgMatches;
 
+use crate::system::Configuration;
+
 use super::Command;
 
 pub struct View {}
 
 impl Command for View {
-    fn new(args: &ArgMatches) -> Self {
+    fn new(args: &ArgMatches, conf: &Configuration) -> Self {
         todo!()
     }
 
-    fn execute(&self, conf: &crate::system::Configuration) -> Result<(), ()> {
+    fn execute(&self) -> Result<(), ()> {
         todo!()
     }
 }
