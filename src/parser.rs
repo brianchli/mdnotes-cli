@@ -1,26 +1,37 @@
-use clap::{ArgMatches, Command};
+use clap::{ArgMatches, Command, arg};
 
-const EDIT: &str = "new";
-const LIST: &str = "lisat";
+const CREATE: &str = "new";
+const LIST: &str = "list";
 const MOVE: &str = "mv";
 const REMOVE: &str = "rm";
 
 pub fn cli() -> Command {
     Command::new("notes")
-        .subcommand_required(true)
-        .subcommand(Command::new(EDIT))
-        .subcommand(Command::new(LIST))
+        .subcommand(
+            Command::new(CREATE)
+                .alias("n")
+                .about("create a new note")
+                .args([
+                    arg!(-t --tags "set [tags] to created note"),
+                    arg!(<name> "name of the note"),
+                    arg!([category] "set the category to store the note"),
+                ]),
+        )
+        .subcommand(Command::new(LIST).alias("ls").about("list notes").args([
+            arg!(-f --full "prints all files and the contents of each file"),
+            arg!(-s --short "prints all files and their details on one line"),
+            arg!([category] "directory to filter by"),
+        ]))
         .subcommand(Command::new(MOVE))
         .subcommand(Command::new(REMOVE))
 }
 
-pub fn get_command() -> Option<(&'static str, ArgMatches)> {
-    let args = cli().get_matches();
+pub fn get_command(args: &ArgMatches) -> Option<(&'static str, &ArgMatches)> {
     match args.subcommand() {
-        Some((EDIT, _)) => Some((EDIT, args)),
-        Some((LIST, _)) => Some((LIST, args)),
-        Some((MOVE, _)) => Some((MOVE, args)),
-        Some((REMOVE, _)) => Some((REMOVE, args)),
-        _ => unreachable!("invariant: there is always a subcommand specified"),
+        Some((CREATE, arg)) | Some(("n", arg)) => Some((CREATE, arg)),
+        Some((LIST, arg)) | Some(("ls", arg)) => Some((LIST, arg)),
+        Some((MOVE, arg)) => Some((MOVE, arg)),
+        Some((REMOVE, arg)) => Some((REMOVE, arg)),
+        _ => None,
     }
 }

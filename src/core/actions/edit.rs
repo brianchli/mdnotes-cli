@@ -1,21 +1,15 @@
-use super::{Command, Configuration};
+use clap::ArgMatches;
 
-use crate::system::DATA_DIR as default_directory;
+use super::{Command, Configuration};
 
 pub struct Edit {}
 
 impl Command for Edit {
-    fn parse_flags(_args: clap::ArgMatches) -> Self {
+    fn new(_args: &ArgMatches) -> Self {
         todo!()
     }
 
     fn execute(&self, conf: &Configuration) -> Result<(), ()> {
         todo!()
-    }
-}
-
-impl Edit {
-    pub fn new(args: clap::ArgMatches) -> Self {
-        Edit::parse_flags(args)
     }
 }

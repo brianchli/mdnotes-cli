@@ -1,22 +1,15 @@
 use clap::ArgMatches;
 
-use super::Action;
+use super::Command;
 
 pub struct View {}
 
-impl Action for View {
-    fn parse(_args: ArgMatches) -> Self {
+impl Command for View {
+    fn new(args: &ArgMatches) -> Self {
         todo!()
     }
 
-    fn apply(&self) -> Result<(), ()> {
+    fn execute(&self, conf: &crate::system::Configuration) -> Result<(), ()> {
         todo!()
     }
 }
-
-impl View {
-    fn new(args: ArgMatches) -> Self {
-        View::parse(args)
-    }
-}
-
