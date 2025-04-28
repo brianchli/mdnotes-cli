@@ -1,5 +1,8 @@
-use std::error::Error;
+use std::{error::Error, fs::OpenOptions, io::Write};
 
+use chrono::Local;
+
+/// Representation of a markdown file
 pub struct File<'a> {
     name: &'a str,
     path: &'a str,
@@ -10,19 +13,51 @@ pub struct File<'a> {
 impl<'a> File<'a> {
     pub(crate) fn new(
         name: &'a str,
-        directory: &'a str,
+        path: &'a str,
         category: Option<&'a str>,
         tags: Option<&'a [String]>,
     ) -> Self {
         Self {
             name,
-            path: directory,
+            path,
             category,
             tags,
         }
     }
 
+    /// Creates and writes the Markdown file with the provided meta
+    /// data fields
     pub fn write(&self) -> Result<(), Box<dyn Error>> {
-        unimplemented!("File writing pending implementation")
+        let file = OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(self.path)?;
+
+        let mut writer = std::io::BufWriter::new(file);
+
+        // write the metadata for the file
+        writer.write_all(self.name.as_bytes())?;
+        let divider = self.name.as_bytes().iter().map(|_| "=").collect::<String>();
+        writer.write_all(b"\n")?;
+        writer.write_all(divider.as_bytes())?;
+        writer.write_all(b"\n- Category:")?;
+        if let Some(category) = &self.category {
+            writer.write_all(category.as_bytes())?;
+        }
+        writer.write_all(b"\n- Tags:")?;
+        if let Some(tags) = self.tags {
+            for (i, tag) in tags.iter().enumerate() {
+                if i != 0 {
+                    writer.write_all(b", ")?;
+                }
+                writer.write_all(tag.as_bytes())?;
+            }
+        }
+        writer.write_all(b"\n")?;
+        let dt = Local::now().format("%d-%b-%Y %H:%M:%S %P %z");
+        writer.write_all(format!("- Created: {}", dt).as_bytes())?;
+        writer.write_all(b"\n")?;
+        writer.flush()?;
+        Ok(())
     }
 }

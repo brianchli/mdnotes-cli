@@ -23,7 +23,7 @@ impl Command for Edit {
         let directory = if let Some(category) = category.as_deref() {
             format!(
                 "{}/{}/{}.md",
-                conf.settings.path.to_owned(),
+                conf.settings.path,
                 category,
                 name.replace(" ", "-").trim()
             )
@@ -34,7 +34,6 @@ impl Command for Edit {
                 name.replace(" ", "-").trim()
             )
         };
-
         Self {
             name,
             category,
