@@ -17,11 +17,14 @@ pub fn cli() -> Command {
                     arg!([category] "set the category to store the note"),
                 ]),
         )
-        .subcommand(Command::new(LIST).alias("ls").about("list notes").args([
-            arg!(-f --full "prints all notes and the contents of each note"),
-            arg!(-s --short "prints summmary of a note in a single line for each note"),
-            arg!([category] "category to filter by"),
-        ]))
+        .subcommand(
+            Command::new(LIST).alias("ls").about("list notes").args([
+                arg!(-f --full "prints all notes and the contents of each note")
+                    .conflicts_with("short"),
+                arg!(-s --short "prints summmary of a note in a single line for each note"),
+                arg!([category] "category to filter by"),
+            ]),
+        )
         .subcommand(Command::new(MOVE))
         .subcommand(Command::new(REMOVE))
 }
