@@ -1,15 +1,27 @@
 pub struct File<'a> {
-    directory: Option<&'a str>,
-    tags: Option<&'a [&'a str]>,
+    name: &'a str,
+    path: &'a str,
+    category: Option<&'a str>,
+    tags: Option<&'a [String]>,
 }
 
 impl<'a> File<'a> {
-    pub(crate) fn new(directory: Option<&'a str>, tags: Option<&'a [&'a str]>) -> Self {
-        Self { directory, tags }
+    pub(crate) fn new(
+        name: &'a str,
+        directory: &'a str,
+        category: Option<&'a str>,
+        tags: Option<&'a [String]>,
+    ) -> Self {
+        Self {
+            name,
+            path: directory,
+            category,
+            tags,
+        }
     }
 
     // FIXME: Write proper error handling
-    pub fn create_file(&self) -> Result<(), ()> {
-        Ok(())
+    pub fn write(&self) -> Result<(), ()> {
+        unimplemented!("File writing pending implementation")
     }
 }
