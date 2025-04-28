@@ -16,10 +16,10 @@ pub struct Edit {
 }
 
 impl Command for Edit {
-    fn new(_args: &ArgMatches, conf: &Configuration) -> Self {
+    fn new(args: &ArgMatches, conf: &Configuration) -> Self {
         // We always demand an argument name
-        let name = _args.get_one::<String>("name").unwrap().clone();
-        let category = _args.get_one::<String>("category").cloned();
+        let name = args.get_one::<String>("name").unwrap().clone();
+        let category = args.get_one::<String>("category").cloned();
         let directory = if let Some(category) = category.as_deref() {
             format!(
                 "{}/{}/{}.md",
