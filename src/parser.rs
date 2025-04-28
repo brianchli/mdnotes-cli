@@ -18,8 +18,8 @@ pub fn cli() -> Command {
                 ]),
         )
         .subcommand(Command::new(LIST).alias("ls").about("list notes").args([
-            arg!(-f --full "prints all files and the contents of each file"),
-            arg!(-s --short "prints all files and their details on one line"),
+            arg!(-f --full "prints all notes and the contents of each note"),
+            arg!(-s --short "prints summmary of a note in a single line for each note"),
             arg!([category] "category to filter by"),
         ]))
         .subcommand(Command::new(MOVE))
