@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use clap::ArgMatches;
 
 use crate::system::Configuration;
@@ -11,7 +13,7 @@ impl Command for View {
         todo!()
     }
 
-    fn execute(&self) -> Result<(), ()> {
+    fn execute(&self) -> Result<(), Box<dyn Error>> {
         todo!()
     }
 }

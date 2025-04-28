@@ -1,8 +1,10 @@
+use std::error::Error;
+
 mod core;
 mod parser;
 mod system;
 
-fn main() -> Result<(), ()> {
+fn main() -> Result<(), Box<dyn Error>> {
     let conf = system::notes_init()?;
     let args = parser::cli().get_matches();
     let command = parser::get_command(&args);

@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use clap::ArgMatches;
 
 use crate::core::markdown;
@@ -41,14 +43,13 @@ impl Command for Edit {
         }
     }
 
-    fn execute(&self) -> Result<(), ()> {
+    fn execute(&self) -> Result<(), Box<dyn Error>> {
         let file = markdown::File::new(
             self.name.as_ref(),
             self.path.as_str(),
             self.category.as_deref(),
             self.tags.as_deref(),
         );
-        // FIXME: Implement proper error handling
-        file.write().map_err(|_| ())
+        file.write()
     }
 }

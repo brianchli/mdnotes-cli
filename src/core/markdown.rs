@@ -1,3 +1,5 @@
+use std::error::Error;
+
 pub struct File<'a> {
     name: &'a str,
     path: &'a str,
@@ -20,8 +22,7 @@ impl<'a> File<'a> {
         }
     }
 
-    // FIXME: Write proper error handling
-    pub fn write(&self) -> Result<(), ()> {
+    pub fn write(&self) -> Result<(), Box<dyn Error>> {
         unimplemented!("File writing pending implementation")
     }
 }
