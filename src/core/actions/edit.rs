@@ -16,7 +16,7 @@ pub struct Edit<'a> {
 }
 
 impl<'a> Command<'a> for Edit<'a> {
-    fn new(args: &'a ArgMatches, conf: &Configuration) -> Self {
+    fn new(args: &'a ArgMatches, conf: &Configuration) -> Result<Self, Box<dyn Error>> {
         // We always demand an argument name
         let name = args.get_one::<String>("name").unwrap();
         let category = args.get_one::<String>("category").map(|s| s.as_str());
@@ -36,14 +36,14 @@ impl<'a> Command<'a> for Edit<'a> {
                 name.replace(" ", "-").trim()
             )
         };
-        Self {
+        Ok(Self {
             name: name.as_str(),
             category,
             path,
             tags: args
                 .get_many::<String>("tags")
                 .map(|s| s.map(|s| s.as_str()).collect()),
-        }
+        })
     }
 
     fn execute(&self) -> Result<(), Box<dyn Error>> {

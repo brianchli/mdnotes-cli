@@ -18,8 +18,8 @@ pub struct View {
     details: Details,
 }
 
-impl <'a> Command<'a> for View {
-    fn new(args: &ArgMatches, conf: &Configuration) -> Self {
+impl Command<'_> for View {
+    fn new(args: &ArgMatches, conf: &Configuration) -> Result<Self, Box<dyn Error>> {
         // flags are represented as booleans and default to false
         let details = if args.get_one("short").is_some_and(|v| *v) {
             Details::Short
@@ -33,7 +33,7 @@ impl <'a> Command<'a> for View {
         } else {
             conf.settings.path.clone()
         };
-        Self { details, path }
+        Ok(Self { details, path })
     }
 
     fn execute(&self) -> Result<(), Box<dyn Error>> {
