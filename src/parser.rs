@@ -12,9 +12,9 @@ pub fn cli() -> Command {
                 .alias("n")
                 .about("create a new note")
                 .args([
-                    arg!(-t --tags "set [tags] to created note"),
+                    arg!(-c --category <value> "set the category to store the note"),
                     arg!(<name> "name of the note"),
-                    arg!([category] "set the category to store the note"),
+                    arg!([tags] "set [tags] for the created note").num_args(0..10),
                 ]),
         )
         .subcommand(
