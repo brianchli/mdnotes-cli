@@ -38,7 +38,9 @@ impl Command for Edit {
             name,
             category,
             path: directory,
-            tags: None,
+            tags: args
+                .get_many::<String>("tags")
+                .map(|s| s.map(|s| s.to_owned()).collect()),
         }
     }
 
