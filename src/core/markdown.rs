@@ -42,6 +42,7 @@ impl<'a> File<'a> {
         writer.write_all(divider.as_bytes())?;
         writer.write_all(b"\n- Category:")?;
         if let Some(category) = &self.category {
+            writer.write_all(b" ")?;
             writer.write_all(category.as_bytes())?;
         }
         writer.write_all(b"\n- Tags:")?;
