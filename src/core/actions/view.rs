@@ -18,7 +18,7 @@ pub struct View {
     details: Details,
 }
 
-impl Command for View {
+impl <'a> Command<'a> for View {
     fn new(args: &ArgMatches, conf: &Configuration) -> Self {
         // flags are represented as booleans and default to false
         let details = if args.get_one("short").is_some_and(|v| *v) {

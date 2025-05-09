@@ -8,19 +8,21 @@ use super::{Command, Configuration};
 
 /// Representation of an edit command and the context
 /// needed for an edit command
-pub struct Edit {
-    name: String,
+pub struct Edit<'a> {
+    name: &'a str,
     path: String,
-    category: Option<String>,
-    tags: Option<Vec<String>>,
+    category: Option<&'a str>,
+    tags: Option<Vec<&'a str>>,
 }
 
-impl Command for Edit {
-    fn new(args: &ArgMatches, conf: &Configuration) -> Self {
+impl<'a> Command<'a> for Edit<'a> {
+    fn new(args: &'a ArgMatches, conf: &Configuration) -> Self {
         // We always demand an argument name
-        let name = args.get_one::<String>("name").unwrap().clone();
-        let category = args.get_one::<String>("category").cloned();
-        let directory = if let Some(category) = category.as_deref() {
+        let name = args.get_one::<String>("name").unwrap();
+        let category = args.get_one::<String>("category").map(|s| s.as_str());
+        // FIXME: Validation for categories. They should be in the format of
+        // a relative directory path e.g., /some/path/
+        let path = if let Some(category) = category {
             format!(
                 "{}/{}/{}.md",
                 conf.settings.path,
@@ -35,20 +37,20 @@ impl Command for Edit {
             )
         };
         Self {
-            name,
+            name: name.as_str(),
             category,
-            path: directory,
+            path,
             tags: args
                 .get_many::<String>("tags")
-                .map(|s| s.map(|s| s.to_owned()).collect()),
+                .map(|s| s.map(|s| s.as_str()).collect()),
         }
     }
 
     fn execute(&self) -> Result<(), Box<dyn Error>> {
         let file = markdown::File::new(
-            self.name.as_ref(),
+            self.name,
             self.path.as_str(),
-            self.category.as_deref(),
+            self.category,
             self.tags.as_deref(),
         );
         file.write()

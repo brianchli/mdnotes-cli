@@ -7,7 +7,7 @@ pub struct File<'a> {
     name: &'a str,
     path: &'a str,
     category: Option<&'a str>,
-    tags: Option<&'a [String]>,
+    tags: Option<&'a [&'a str]>,
 }
 
 impl<'a> File<'a> {
@@ -15,7 +15,7 @@ impl<'a> File<'a> {
         name: &'a str,
         path: &'a str,
         category: Option<&'a str>,
-        tags: Option<&'a [String]>,
+        tags: Option<&'a [&'a str]>,
     ) -> Self {
         Self {
             name,

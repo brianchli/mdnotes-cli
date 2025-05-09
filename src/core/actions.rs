@@ -6,9 +6,9 @@ use std::error::Error;
 use crate::system::Configuration;
 use clap::ArgMatches;
 
-pub trait Command {
+pub trait Command<'a> {
     /// Creates a command using the flags specified to the program
-    fn new(args: &ArgMatches, conf: &Configuration) -> Self;
+    fn new(args: &'a ArgMatches, conf: &Configuration) -> Self;
     /// Execute the command
     fn execute(&self) -> Result<(), Box<dyn Error>>;
 }
