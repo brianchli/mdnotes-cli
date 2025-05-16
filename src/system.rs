@@ -44,5 +44,5 @@ fn configuration_init() -> Result<Configuration, Box<dyn Error>> {
         return Ok(conf);
     };
     let conf = std::fs::read_to_string(CONFIG_FILE)?;
-    Ok(toml::from_str::<Configuration>(conf.as_ref()).map_err(|err| err.to_string())?)
+    Ok(toml::from_str::<Configuration>(conf.as_ref())?)
 }
