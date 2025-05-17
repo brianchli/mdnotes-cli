@@ -21,9 +21,9 @@ pub struct View {
 impl Command<'_> for View {
     fn new(args: &ArgMatches, conf: &Configuration) -> Result<Self, Box<dyn Error>> {
         // flags are represented as booleans and default to false
-        let details = if args.get_one("short").is_some_and(|v| *v) {
+        let details = if args.get_one("short").is_some_and(|&v| v) {
             Details::Short
-        } else if args.get_one::<bool>("full").is_some_and(|v| *v) {
+        } else if args.get_one::<bool>("full").is_some_and(|&v| v) {
             Details::Full
         } else {
             Details::Default
@@ -38,15 +38,16 @@ impl Command<'_> for View {
 
     fn execute(&self) -> Result<(), Box<dyn Error>> {
         let path = Path::new(self.path.deref());
-        if let Details::Default = self.details {
-            walk_dir(path, default_cb)?
-        } else {
-            unimplemented!("full and short flags are not implemented")
+        match self.details {
+            Details::Default => Ok(walk_dir(path, default_cb)?),
+            _ => unimplemented!("full and short flags are not implemented"),
         }
-        Ok(())
     }
 }
 
+/// Walks the directory and applies the callback function.
+///
+/// code snippet taken from std::fs::read_dir documentation.
 fn walk_dir(dir: &Path, cb: fn(&DirEntry)) -> std::io::Result<()> {
     if dir.is_dir() {
         for entry in std::fs::read_dir(dir)? {
