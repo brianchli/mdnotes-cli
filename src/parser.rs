@@ -2,8 +2,6 @@ use clap::{ArgMatches, Command, arg};
 
 const CREATE: &str = "new";
 const LIST: &str = "list";
-const MOVE: &str = "mv";
-const REMOVE: &str = "rm";
 
 pub fn cli() -> Command {
     Command::new("notes")
@@ -25,16 +23,12 @@ pub fn cli() -> Command {
                 arg!([category] "category to filter by"),
             ]),
         )
-        .subcommand(Command::new(MOVE))
-        .subcommand(Command::new(REMOVE))
 }
 
 pub fn get_command(args: &ArgMatches) -> Option<(&'static str, &ArgMatches)> {
     match args.subcommand() {
         Some((CREATE, arg)) | Some(("n", arg)) => Some((CREATE, arg)),
         Some((LIST, arg)) | Some(("ls", arg)) => Some((LIST, arg)),
-        Some((MOVE, arg)) => Some((MOVE, arg)),
-        Some((REMOVE, arg)) => Some((REMOVE, arg)),
         _ => None,
     }
 }
