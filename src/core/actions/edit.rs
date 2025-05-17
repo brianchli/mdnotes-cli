@@ -1,6 +1,7 @@
 use std::{
     error::Error,
     ffi::OsStr,
+    ops::ControlFlow,
     path::{Path, PathBuf},
 };
 
@@ -73,14 +74,24 @@ impl<'a> Command<'a> for Edit<'a> {
 /// Validates that a filename is represented in the format
 /// <name>+([-]<name>+)?* of only ascii chars
 fn validate_name(name: &str) -> Result<&str, Box<dyn Error>> {
-    if let Some(p) = name.find(|c: char| !(!c.is_ascii() || c.is_alphabetic() || c == '-')) {
+    if let Some(p) = name.find(|c: char| !(c.is_alphabetic() && c < 128 as char || c == '-')) {
+        let res = name.chars().try_fold((0usize, 0), |(idx, b), elem| {
+            if b >= p {
+                ControlFlow::Break((idx, b))?;
+            }
+            ControlFlow::Continue((idx + 1, b + elem.len_utf8()))
+        });
+
+        let idx = res
+            .continue_value()
+            .map_or(res.break_value().unwrap().0, |(v, _)| v);
+
         return Err(format!(
             "invalid character '{}' found in filename at position {}",
-            name.as_bytes()
-                .get(p)
-                .copied()
-                .expect("p is a valid byte index into name") as char,
-            p + 1
+            name.chars()
+                .nth(idx)
+                .expect("p is a valid byte index into name"),
+            idx
         )
         .into());
     };
