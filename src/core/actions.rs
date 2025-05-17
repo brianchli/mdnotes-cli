@@ -15,10 +15,6 @@ pub trait Command<'a> {
     fn execute(&self) -> Result<(), Box<dyn Error>>;
 }
 
-pub fn default() {
-    todo!("implement default behaviour when no arguments are provided")
-}
-
 pub fn create(conf: &Configuration, args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     edit::Edit::new(args, conf)?.execute()
 }

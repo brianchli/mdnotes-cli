@@ -5,6 +5,8 @@ const LIST: &str = "list";
 
 pub fn cli() -> Command {
     Command::new("notes")
+        .arg_required_else_help(true)
+        .about("Create markdown notes in the terminal")
         .subcommand(
             Command::new(CREATE)
                 .alias("n")
