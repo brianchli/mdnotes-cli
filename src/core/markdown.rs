@@ -47,14 +47,13 @@ impl<'a> File<'a> {
         }
         writer.write_all(b"\n- Tags:")?;
         if let Some(tags) = self.tags {
-            tags.iter().enumerate().try_for_each(|(idx, t)| {
-                if idx != 0 {
-                    writer.write_all(b", ")?;
-                } else {
-                    writer.write_all(b" ")?;
-                }
-                writer.write_all(t.as_bytes())
-            })?;
+            let mut iter = tags.iter();
+            writer.write_all(b" ")?;
+            writer.write_all(iter.next().unwrap().as_bytes())?;
+            for t in iter {
+                writer.write_all(b",")?;
+                writer.write_all(t.as_bytes())?;
+            }
         }
         writer.write_all(b"\n")?;
         let dt = Local::now().format("%d-%b-%Y %H:%M:%S %P %z");
