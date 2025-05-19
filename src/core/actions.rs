@@ -8,7 +8,7 @@ use clap::ArgMatches;
 
 pub trait Command<'a> {
     /// Creates a command using the flags specified to the program
-    fn new(args: &'a ArgMatches, conf: &Configuration) -> Result<Self, Box<dyn Error>>
+    fn new(args: &'a ArgMatches, conf: &'a Configuration) -> Result<Self, Box<dyn Error>>
     where
         Self: Sized;
     /// Execute the command
