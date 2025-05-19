@@ -2,4 +2,4 @@ mod actions;
 mod markdown;
 
 pub mod types;
-pub use actions::{create, default, list};
+pub use actions::{create, list};
