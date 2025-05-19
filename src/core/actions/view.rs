@@ -84,12 +84,17 @@ impl Command<'_> for View {
         } else {
             Details::Default
         };
-        let path = if let Some(cat) = args.get_one::<String>("category") {
-            PathBuf::from(format!("{}/{}", conf.settings.path, cat))
+        Ok(if let Some(cat) = args.get_one::<String>("category") {
+            Self {
+                details,
+                path: PathBuf::from(format!("{}/{}", conf.settings.path, cat)),
+            }
         } else {
-            PathBuf::from(&conf.settings.path)
-        };
-        Ok(Self { details, path })
+            Self {
+                details,
+                path: PathBuf::from(&conf.settings.path),
+            }
+        })
     }
 
     fn execute(&self) -> Result<(), Box<dyn Error>> {

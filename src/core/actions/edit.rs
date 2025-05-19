@@ -29,7 +29,7 @@ impl<'a> Command<'a> for Edit<'a> {
             PathBuf::from(format!(
                 "{}/{}",
                 conf.settings.path,
-                validate_path(Path::new(category))?
+                validate_path(category)?
             ))
         } else {
             PathBuf::from(&conf.settings.path)
@@ -98,17 +98,18 @@ fn validate_name(name: &str) -> Result<&str, Box<dyn Error>> {
     Ok(name)
 }
 
-/// Validates that a Path is in the form of /path/to/category,
-/// where all characters are valid ascii alphanumeric characters or
-/// underscores.
-fn validate_path(path: &Path) -> Result<&str, Box<dyn Error>> {
+// FIXME: Review. May not provided sufficient guarantees.
+// Portable characters can be found in definitions within
+// https://pubs.opengroup.org/onlinepubs/9799919799/
+fn validate_path(path: &str) -> Result<&str, Box<dyn Error>> {
+    let path = Path::new(path);
     path.iter()
         .try_for_each(|s: &OsStr| -> Result<(), Box<dyn Error>> {
             let st = s.to_str().ok_or(format!(
                 "create: found invalid UTF-8 string: {}",
                 s.to_string_lossy()
             ))?;
-            if let Some(p) = st.find(|c: char| !(c.is_alphanumeric() || c == '_')) {
+            if let Some(p) = st.find(|c: char| !(c.is_ascii() || c <= 127 as char)) {
                 return Err(format!(
                     "invalid character '{}' found in {st} for {}",
                     st.as_bytes()
