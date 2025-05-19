@@ -21,7 +21,7 @@ pub struct Edit<'a> {
     path: PathBuf,
     category: Option<&'a str>,
     tags: Option<Vec<&'a str>>,
-    editor: &'a str,
+    editor: Option<&'a str>,
 }
 
 impl<'a> Command<'a> for Edit<'a> {
@@ -41,12 +41,17 @@ impl<'a> Command<'a> for Edit<'a> {
 
         path.push(format!("{name}.md"));
 
-        let editor = conf
-            .settings
-            .editor
-            .as_deref()
-            .or(EDITOR)
-            .unwrap_or(DEFAULT_EDITOR);
+        let editor = if args.get_one::<bool>("quiet").is_some() {
+            None
+        } else {
+            Some(
+                conf.settings
+                    .editor
+                    .as_deref()
+                    .or(EDITOR)
+                    .unwrap_or(DEFAULT_EDITOR),
+            )
+        };
 
         Ok(Self {
             name: validate_name(name)?,
@@ -70,6 +75,7 @@ impl<'a> Command<'a> for Edit<'a> {
                 std::fs::create_dir_all(parent)?
             };
         }
+
         markdown::File::new(
             self.name,
             self.path
@@ -81,10 +87,11 @@ impl<'a> Command<'a> for Edit<'a> {
         )
         .write()?;
 
-        std::process::Command::new(self.editor)
-            .arg(&self.path)
-            .status()?;
-
+        if let Some(editor) = self.editor {
+            std::process::Command::new(editor)
+                .arg(&self.path)
+                .status()?;
+        }
         Ok(())
     }
 }
