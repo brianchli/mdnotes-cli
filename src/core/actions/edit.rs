@@ -9,7 +9,10 @@ use clap::ArgMatches;
 
 use crate::core::markdown;
 
+const DEFAULT_EDITOR: &str = "vim";
+
 use super::{Command, Configuration};
+const EDITOR: Option<&str> = option_env!("EDITOR");
 
 /// Representation of an edit command and the context
 /// needed for an edit command
@@ -18,10 +21,11 @@ pub struct Edit<'a> {
     path: PathBuf,
     category: Option<&'a str>,
     tags: Option<Vec<&'a str>>,
+    editor: &'a str,
 }
 
 impl<'a> Command<'a> for Edit<'a> {
-    fn new(args: &'a ArgMatches, conf: &Configuration) -> Result<Self, Box<dyn Error>> {
+    fn new(args: &'a ArgMatches, conf: &'a Configuration) -> Result<Self, Box<dyn Error>> {
         // We always demand an argument name
         let name = args.get_one::<String>("name").unwrap();
         let category = args.get_one::<String>("category").map(|s| s.as_str());
@@ -37,6 +41,13 @@ impl<'a> Command<'a> for Edit<'a> {
 
         path.push(format!("{name}.md"));
 
+        let editor = conf
+            .settings
+            .editor
+            .as_deref()
+            .or(EDITOR)
+            .unwrap_or(DEFAULT_EDITOR);
+
         Ok(Self {
             name: validate_name(name)?,
             path,
@@ -44,6 +55,7 @@ impl<'a> Command<'a> for Edit<'a> {
             tags: args
                 .get_many::<String>("tags")
                 .map(|s| s.map(|s| s.as_str()).collect()),
+            editor,
         })
     }
 
@@ -67,7 +79,13 @@ impl<'a> Command<'a> for Edit<'a> {
             self.category,
             self.tags.as_deref(),
         )
-        .write()
+        .write()?;
+
+        std::process::Command::new(self.editor)
+            .arg(&self.path)
+            .status()?;
+
+        Ok(())
     }
 }
 

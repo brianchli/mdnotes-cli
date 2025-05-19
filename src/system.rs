@@ -15,12 +15,14 @@ pub struct Configuration {
 #[derive(Deserialize, Serialize)]
 pub(crate) struct Settings {
     pub(crate) path: String,
+    pub(crate) editor: Option<String>,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self {
             path: DATA_DIR.to_owned(),
+            editor: None,
         }
     }
 }
