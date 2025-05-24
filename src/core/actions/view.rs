@@ -8,59 +8,9 @@ use std::{
 use clap::ArgMatches;
 use termcolor::{Color, ColorSpec, StandardStream, WriteColor};
 
-use crate::system::Configuration;
+use crate::{system::Configuration, write_coloured, write_colouredln};
 
 use super::Command;
-
-macro_rules! write_coloured {
-
-    // bold write
-    ($stream: ident, bold, $($arg: tt)+) => {
-        $stream.set_color(ColorSpec::new().set_bold(true))?;
-        write!($stream, $($arg)+)?;
-        $stream.reset()?;
-    };
-
-    // write coloured
-    ($stream: ident, colour=$colour: expr, $($arg: tt)+) => {
-        $stream.set_color(ColorSpec::new().set_fg(Some($colour)))?;
-        write!($stream, $($arg)+)?;
-        $stream.reset()?;
-    };
-
-    // write coloured and bolded
-    ($stream: ident, bold_colour=$colour: expr, $($arg: tt)+) => {
-        $stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some($colour)))?;
-        write!($stream, $($arg)+)?;
-        $stream.reset()?;
-    };
-
-}
-
-macro_rules! write_colouredln {
-
-    // bold write
-    ($stream: ident, bold, $($arg: tt)+) => {
-        $stream.set_color(ColorSpec::new().set_bold(true))?;
-        writeln!($stream, $($arg)+)?;
-        $stream.reset()?;
-    };
-
-    // write coloured
-    ($stream: ident, colour=$colour: expr, $($arg: tt)+) => {
-        $stream.set_color(ColorSpec::new().set_fg(Some($colour)))?;
-        writeln!($stream, $($arg)+)?;
-        $stream.reset()?;
-    };
-
-    // write coloured and bolded
-    ($stream: ident, bold_colour=$colour: expr, $($arg: tt)+) => {
-        $stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some($colour)))?;
-        writeln!($stream, $($arg)+)?;
-        $stream.reset()?;
-    };
-
-}
 
 #[derive(Debug)]
 enum Details {
@@ -226,7 +176,8 @@ fn full_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
     let mut lines = reader.lines();
     let title = lines.next().ok_or("error")??;
     let header = lines.next().ok_or("error")??;
-    for l in lines {
+
+    for l in lines.by_ref().take(3) {
         let st = l?;
         let (header, content) = st
             .split_once("- ")
@@ -247,8 +198,12 @@ fn full_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
             }
         )?;
     }
-    writeln!(out, "\n{}", title)?;
-    writeln!(out, "{}\n", header)?;
+    writeln!(out, "{}", title)?;
+    writeln!(out, "{}", header)?;
+    for l in lines {
+        writeln!(out, "{}", l?)?;
+    }
+    writeln!(out)?;
     Ok(())
 }
 

@@ -12,7 +12,7 @@ pub fn cli() -> Command {
                 .alias("n")
                 .about("create a new note")
                 .args([
-                    arg!(-q --quiet "create file without opening to edit"),
+                    arg!(--quiet "silently create a note"),
                     arg!(-c --category <value> "set the category to store the note"),
                     arg!(<name> "name of the note"),
                     arg!([tags] "set [tags] for the created note").num_args(0..10),

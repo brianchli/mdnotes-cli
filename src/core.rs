@@ -1,5 +1,5 @@
 mod actions;
 mod markdown;
 
-pub mod types;
+pub mod utils;
 pub use actions::{create, list};

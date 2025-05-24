@@ -9,9 +9,8 @@ use clap::ArgMatches;
 
 use crate::core::markdown;
 
-const DEFAULT_EDITOR: &str = "vim";
-
 use super::{Command, Configuration};
+const DEFAULT_EDITOR: &str = "vim";
 const EDITOR: Option<&str> = option_env!("EDITOR");
 
 /// Representation of an edit command and the context
@@ -41,17 +40,16 @@ impl<'a> Command<'a> for Edit<'a> {
 
         path.push(format!("{name}.md"));
 
-        let editor = if args.get_one::<bool>("quiet").is_some() {
-            None
-        } else {
-            Some(
+        let editor = args
+            .get_one::<bool>("quiet")
+            .is_some_and(|&b: &bool| !b)
+            .then(|| {
                 conf.settings
                     .editor
                     .as_deref()
                     .or(EDITOR)
-                    .unwrap_or(DEFAULT_EDITOR),
-            )
-        };
+                    .unwrap_or(DEFAULT_EDITOR)
+            });
 
         Ok(Self {
             name: validate_name(name)?,
@@ -89,7 +87,7 @@ impl<'a> Command<'a> for Edit<'a> {
 
         if let Some(editor) = self.editor {
             std::process::Command::new(editor)
-                .arg(&self.path)
+                .arg(self.path.as_path())
                 .status()?;
         }
         Ok(())
