@@ -47,15 +47,22 @@ impl<'a> Command<'a> for Edit<'a> {
                     .editor
                     .as_deref()
                     .or_else(|| {
+                        let mut vars = std::env::vars();
                         let allowed_editors: fn((String, String)) -> Option<&'a str> =
                             |(_, v)| match v.as_str() {
                                 "nvim" => Some("nvim"),
                                 "glow" => Some("glow"),
                                 _ => None,
                             };
-                        std::env::vars()
-                            .find(|(key, _)| key == "NOTES_EDITOR")
+                        vars.find(|(key, _)| key == "NOTES_EDITOR")
                             .and_then(allowed_editors)
+                            .and_then(|s| {
+                                if s == "glow" && !vars.any(|(k, _)| k == "EDITOR") {
+                                    None
+                                } else {
+                                    Some(s)
+                                }
+                            })
                     })
                     .unwrap_or(DEFAULT_EDITOR)
             });
@@ -95,9 +102,11 @@ impl<'a> Command<'a> for Edit<'a> {
         .write()?;
 
         if let Some(editor) = self.editor {
-            std::process::Command::new(editor)
-                .arg(self.path.as_path())
-                .status()?;
+            let mut command = std::process::Command::new(editor);
+            if editor == "glow" {
+                command.arg(r#"--tui"#);
+            }
+            command.arg(self.path.as_os_str()).status()?;
         }
         Ok(())
     }
