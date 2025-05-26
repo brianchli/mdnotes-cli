@@ -2,6 +2,7 @@ use clap::{ArgMatches, Command, arg};
 
 const CREATE: &str = "new";
 const LIST: &str = "list";
+const CONFIG: &str = "config";
 
 pub fn cli() -> Command {
     Command::new("notes")
@@ -26,12 +27,18 @@ pub fn cli() -> Command {
                 arg!([category] "category to filter by"),
             ]),
         )
+        .subcommand(
+            Command::new(CONFIG)
+                .about("notes configuration")
+                .args([arg!(--root "only print the notes root directory")]),
+        )
 }
 
 pub fn get_command(args: &ArgMatches) -> Option<(&'static str, &ArgMatches)> {
     match args.subcommand() {
         Some((CREATE, arg)) | Some(("n", arg)) => Some((CREATE, arg)),
         Some((LIST, arg)) | Some(("ls", arg)) => Some((LIST, arg)),
+        Some((CONFIG, arg)) => Some((CONFIG, arg)),
         _ => None,
     }
 }

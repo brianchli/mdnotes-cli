@@ -11,6 +11,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     match command {
         Some(("new", args)) => core::create(&conf, args)?,
         Some(("list", args)) => core::list(&conf, args)?,
+        Some(("config", args)) => core::config(&conf, args)?,
         _ => {}
     }
     Ok(())

@@ -1,5 +1,6 @@
 mod edit;
 mod view;
+mod config;
 
 use std::error::Error;
 
@@ -21,4 +22,8 @@ pub fn create(conf: &Configuration, args: &ArgMatches) -> Result<(), Box<dyn Err
 
 pub fn list(conf: &Configuration, args: &ArgMatches) -> Result<(), Box<dyn Error>> {
     view::View::new(args, conf)?.execute()
+}
+
+pub fn config(conf: &Configuration, args: &ArgMatches) -> Result<(), Box<dyn Error>> {
+    config::ConfigurationAction::new(args, conf)?.execute()
 }
