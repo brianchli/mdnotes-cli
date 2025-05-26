@@ -7,7 +7,7 @@ const CONFIG: &str = "config";
 pub fn cli() -> Command {
     Command::new("notes")
         .arg_required_else_help(true)
-        .about("Create markdown notes in the terminal")
+        .about("Create markdown notes in the terminal.")
         .subcommand(
             Command::new(CREATE)
                 .alias("n")
@@ -21,6 +21,8 @@ pub fn cli() -> Command {
         )
         .subcommand(
             Command::new(LIST).alias("ls").about("list notes").args([
+                arg!(--root "prints the root directory for notes")
+                    .conflicts_with_all(["full", "short", "category"]),
                 arg!(-f --full "prints all notes and the contents of each note")
                     .conflicts_with("short"),
                 arg!(-s --short "prints summmary of a note in a single line for each note"),
@@ -30,7 +32,7 @@ pub fn cli() -> Command {
         .subcommand(
             Command::new(CONFIG)
                 .about("notes configuration")
-                .args([arg!(--root "only print the notes root directory")]),
+                .args([arg!(--path "print the configuration file path")]),
         )
 }
 

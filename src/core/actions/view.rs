@@ -14,6 +14,7 @@ use super::Command;
 
 #[derive(Debug)]
 enum Details {
+    Root,
     Short,
     Full,
     Default,
@@ -26,6 +27,12 @@ pub struct View {
 
 impl Command<'_> for View {
     fn new(args: &ArgMatches, conf: &Configuration) -> Result<Self, Box<dyn Error>> {
+        if args.get_one::<bool>("root").is_some_and(|&b| b) {
+            return Ok(Self {
+                path: PathBuf::from(&conf.settings.path),
+                details: Details::Root,
+            });
+        }
         // flags are represented as booleans and default to false
         let details = if args.get_one("short").is_some_and(|&v| v) {
             Details::Short
@@ -49,6 +56,14 @@ impl Command<'_> for View {
 
     fn execute(&self) -> Result<(), Box<dyn Error>> {
         match self.details {
+            Details::Root => Ok(writeln!(
+                std::io::stdout(),
+                "{}",
+                self.path
+                    .as_os_str()
+                    .to_str()
+                    .expect("only valid UTF-8 characters are used for the path in configuration")
+            )?),
             Details::Default => Ok(walk_dir(&self.path, &default_cb)?),
             Details::Full => Ok(walk_dir(&self.path, &full_cb)?),
             Details::Short => {

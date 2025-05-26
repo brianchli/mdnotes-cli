@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 pub const DATA_DIR: &str = concat!(std::env!("HOME"), "/.local/share/notes");
 const CONFIG_DIR: &str = concat!(std::env!("HOME"), "/.config/notes");
-const CONFIG_FILE: &str = concat!(std::env!("HOME"), "/.config/notes/notes.toml");
+pub const CONFIG_FILE: &str = concat!(std::env!("HOME"), "/.config/notes/notes.toml");
 
 #[derive(Deserialize, Serialize, Default)]
 #[allow(unused)]

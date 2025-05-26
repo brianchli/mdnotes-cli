@@ -1,4 +1,6 @@
-use crate::system::Configuration;
+use std::io::{Write, stdout};
+
+use crate::system::{CONFIG_FILE, Configuration};
 
 use super::Command;
 
@@ -22,7 +24,7 @@ impl<'a> Command<'a> for ConfigurationAction<'a> {
         Ok(Self {
             action: ConfigOption::Print(
                 *args
-                    .get_one::<bool>("root")
+                    .get_one::<bool>("path")
                     .expect("flag is set to false by default"),
             ),
             configuration: conf,
@@ -34,7 +36,7 @@ impl<'a> Command<'a> for ConfigurationAction<'a> {
         // Refactors necessary when extending behaviour.
         let ConfigOption::Print(b) = self.action;
         if b {
-            println!("{}", self.configuration.settings.path);
+            writeln!(stdout(), "{}", CONFIG_FILE)?;
         } else {
             println!(
                 r#"notes.toml
