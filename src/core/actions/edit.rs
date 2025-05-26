@@ -11,7 +11,6 @@ use crate::core::markdown;
 
 use super::{Command, Configuration};
 const DEFAULT_EDITOR: &str = "vim";
-const EDITOR: Option<&str> = option_env!("EDITOR");
 
 /// Representation of an edit command and the context
 /// needed for an edit command
@@ -47,7 +46,17 @@ impl<'a> Command<'a> for Edit<'a> {
                 conf.settings
                     .editor
                     .as_deref()
-                    .or(EDITOR)
+                    .or_else(|| {
+                        let allowed_editors: fn((String, String)) -> Option<&'a str> =
+                            |(_, v)| match v.as_str() {
+                                "nvim" => Some("nvim"),
+                                "glow" => Some("glow"),
+                                _ => None,
+                            };
+                        std::env::vars()
+                            .find(|(key, _)| key == "EDITOR")
+                            .and_then(allowed_editors)
+                    })
                     .unwrap_or(DEFAULT_EDITOR)
             });
 
