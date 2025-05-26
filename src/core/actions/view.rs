@@ -160,7 +160,7 @@ fn max_name_and_tag_len(
 }
 
 fn default_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
-    println!("{}", dir.path().to_str().unwrap());
+    writeln!(std::io::stdout(), "{}", dir.path().to_str().unwrap())?;
     Ok(())
 }
 
