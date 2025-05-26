@@ -198,7 +198,7 @@ fn full_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
             }
         )?;
     }
-    writeln!(out, "{}", title)?;
+    writeln!(out, "\n{}", title)?;
     writeln!(out, "{}", header)?;
     for l in lines {
         writeln!(out, "{}", l?)?;
