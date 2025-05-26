@@ -54,7 +54,7 @@ impl<'a> Command<'a> for Edit<'a> {
                                 _ => None,
                             };
                         std::env::vars()
-                            .find(|(key, _)| key == "EDITOR")
+                            .find(|(key, _)| key == "NOTES_EDITOR")
                             .and_then(allowed_editors)
                     })
                     .unwrap_or(DEFAULT_EDITOR)
