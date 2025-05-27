@@ -8,12 +8,12 @@ enum ConfigOption {
     Print(bool),
 }
 
-pub struct ConfigurationAction<'a> {
+pub struct ConfigurationCommand<'a> {
     action: ConfigOption,
     configuration: &'a Configuration,
 }
 
-impl<'a> Command<'a> for ConfigurationAction<'a> {
+impl<'a> Command<'a> for ConfigurationCommand<'a> {
     fn new(
         args: &'a clap::ArgMatches,
         conf: &'a Configuration,

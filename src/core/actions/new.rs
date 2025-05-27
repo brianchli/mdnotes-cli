@@ -14,7 +14,7 @@ const DEFAULT_EDITOR: &str = "vim";
 
 /// Representation of an edit command and the context
 /// needed for an edit command
-pub struct Edit<'a> {
+pub struct NewCommand<'a> {
     name: &'a str,
     path: PathBuf,
     category: Option<&'a str>,
@@ -22,7 +22,7 @@ pub struct Edit<'a> {
     editor: Option<&'a str>,
 }
 
-impl<'a> Command<'a> for Edit<'a> {
+impl<'a> Command<'a> for NewCommand<'a> {
     fn new(args: &'a ArgMatches, conf: &'a Configuration) -> Result<Self, Box<dyn Error>> {
         // We always demand an argument name
         let name = args.get_one::<String>("name").unwrap();

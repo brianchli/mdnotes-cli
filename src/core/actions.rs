@@ -1,5 +1,5 @@
-mod edit;
-mod view;
+mod new;
+mod list;
 mod config;
 
 use std::error::Error;
@@ -17,13 +17,13 @@ pub trait Command<'a> {
 }
 
 pub fn create(conf: &Configuration, args: &ArgMatches) -> Result<(), Box<dyn Error>> {
-    edit::Edit::new(args, conf)?.execute()
+    new::NewCommand::new(args, conf)?.execute()
 }
 
 pub fn list(conf: &Configuration, args: &ArgMatches) -> Result<(), Box<dyn Error>> {
-    view::View::new(args, conf)?.execute()
+    list::ListCommand::new(args, conf)?.execute()
 }
 
 pub fn config(conf: &Configuration, args: &ArgMatches) -> Result<(), Box<dyn Error>> {
-    config::ConfigurationAction::new(args, conf)?.execute()
+    config::ConfigurationCommand::new(args, conf)?.execute()
 }

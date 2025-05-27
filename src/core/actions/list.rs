@@ -20,12 +20,12 @@ enum Details {
     Default,
 }
 
-pub struct View {
+pub struct ListCommand {
     path: PathBuf,
     details: Details,
 }
 
-impl Command<'_> for View {
+impl Command<'_> for ListCommand {
     fn new(args: &ArgMatches, conf: &Configuration) -> Result<Self, Box<dyn Error>> {
         if args.get_one::<bool>("root").is_some_and(|&b| b) {
             return Ok(Self {
