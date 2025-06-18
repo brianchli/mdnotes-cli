@@ -1,14 +1,17 @@
 use std::{
     error::Error,
     fs::DirEntry,
-    io::{BufRead, BufReader, Write},
+    io::{BufRead, BufReader, IsTerminal, Write},
     path::{Path, PathBuf},
 };
 
 use clap::ArgMatches;
 use termcolor::{Color, ColorSpec, StandardStream, WriteColor};
 
-use crate::{system::Configuration, write_coloured, write_colouredln};
+use crate::{
+    system::{self, Configuration},
+    write_coloured, write_colouredln,
+};
 
 use super::Command;
 
@@ -33,6 +36,14 @@ impl Command<'_> for ListCommand {
                 details: Details::Root,
             });
         }
+
+        if let Some(options) = &conf.options {
+            if options.hide_root.as_ref().is_some_and(|s| s == "true") {
+                // safety: notes is a single threaded program
+                unsafe { std::env::set_var("NOTES_HIDE_ROOT", "true") };
+            }
+        }
+
         // flags are represented as booleans and default to false
         let details = if args.get_one("short").is_some_and(|&v| v) {
             Details::Short
@@ -175,7 +186,30 @@ fn max_name_and_tag_len(
 }
 
 fn default_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
-    writeln!(std::io::stdout(), "{}", dir.path().to_str().unwrap())?;
+    if std::io::stdout().is_terminal()
+        && std::env::var("NOTES_HIDE_ROOT").is_ok_and(|s| s == "true")
+    {
+        let mut shortened_path = String::new();
+        let root_path_length = system::DATA_DIR.chars().count();
+        for (i, c) in system::DATA_DIR.chars().enumerate() {
+            if c == '/' && i != root_path_length - 1 {
+                shortened_path.push(c);
+                shortened_path.push(system::DATA_DIR.chars().nth(i + 1).unwrap());
+            }
+        }
+        writeln!(
+            std::io::stdout(),
+            "{shortened_path}{}",
+            dir.path()
+                .to_str()
+                .unwrap()
+                .split(system::DATA_DIR)
+                .last()
+                .unwrap()
+        )?;
+    } else {
+        writeln!(std::io::stdout(), "{}", dir.path().to_str().unwrap())?;
+    }
     Ok(())
 }
 

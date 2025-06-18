@@ -10,12 +10,18 @@ pub const CONFIG_FILE: &str = concat!(std::env!("HOME"), "/.config/notes/notes.t
 #[allow(unused)]
 pub struct Configuration {
     pub(crate) settings: Settings,
+    pub(crate) options: Option<Options>,
 }
 
 #[derive(Deserialize, Serialize)]
 pub(crate) struct Settings {
     pub(crate) path: String,
     pub(crate) editor: Option<String>,
+}
+
+#[derive(Deserialize, Serialize, Default)]
+pub(crate) struct Options {
+    pub(crate) hide_root: Option<String>,
 }
 
 impl Default for Settings {
