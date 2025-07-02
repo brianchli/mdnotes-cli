@@ -216,12 +216,36 @@ fn default_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
 fn full_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
     let reader = BufReader::new(std::fs::File::open(dir.path())?);
     let mut out = StandardStream::stdout(termcolor::ColorChoice::Always);
-    write_colouredln!(
-        out,
-        colour = Color::Green,
-        "{}",
-        dir.path().to_str().unwrap()
-    );
+    if std::io::stdout().is_terminal()
+        && std::env::var("NOTES_HIDE_ROOT").is_ok_and(|s| s == "true")
+    {
+        let mut shortened_path = String::new();
+        let root_path_length = system::DATA_DIR.chars().count();
+        for (i, c) in system::DATA_DIR.chars().enumerate() {
+            if c == '/' && i != root_path_length - 1 {
+                shortened_path.push(c);
+                shortened_path.push(system::DATA_DIR.chars().nth(i + 1).unwrap());
+            }
+        }
+        write_colouredln!(
+            out,
+            colour = Color::Green,
+            "{shortened_path}{}",
+            dir.path()
+                .to_str()
+                .unwrap()
+                .split(system::DATA_DIR)
+                .last()
+                .unwrap()
+        );
+    } else {
+        write_colouredln!(
+            out,
+            colour = Color::Green,
+            "{}",
+            dir.path().to_str().unwrap()
+        );
+    }
     let mut lines = reader.lines();
     let title = lines.next().ok_or("error")??;
     let header = lines.next().ok_or("error")??;
