@@ -1,6 +1,6 @@
 use std::{
     error::Error,
-    fs::DirEntry,
+    fs::{DirEntry, File},
     io::{BufRead, BufReader, IsTerminal, Write},
     path::{Path, PathBuf},
 };
@@ -9,6 +9,7 @@ use clap::ArgMatches;
 use termcolor::{Color, ColorSpec, StandardStream, WriteColor};
 
 use crate::{
+    core::markdown::{Metadata, NotesFrontMatter},
     system::{self, Configuration},
     write_coloured, write_colouredln,
 };
@@ -78,7 +79,7 @@ impl Command<'_> for ListCommand {
             Details::Default => Ok(walk_dir(&self.path, &default_cb)?),
             Details::Full => Ok(walk_dir(&self.path, &full_cb)?),
             Details::Short => {
-                let (namelen, taglen) = max_name_and_tag_len(None, &self.path).unwrap();
+                let (namelen, taglen) = max_name_and_tag_len(None, &self.path)?;
                 let cb = |dir: &DirEntry| -> Result<(), Box<dyn Error>> {
                     short_cb(dir, namelen, taglen)
                 };
@@ -101,11 +102,42 @@ fn walk_dir(
             if path.is_dir() {
                 walk_dir(&path, cb)?;
             } else {
-                cb(&entry)?;
+                let path_str = path
+                    .to_str()
+                    .expect("Invalid UTF-8 sequence provided as path");
+                if path_str.is_ascii() && &path_str[path_str.len() - 2..] == "md"
+                    || path_str.chars().rev().take(2).collect::<String>() == "md"
+                {
+                    cb(&entry)?;
+                }
             }
         }
     }
     Ok(())
+}
+
+/// Utility function for fetching the yaml front matter of a note
+fn fetch_front_matter(reader: &mut BufReader<File>) -> Result<String, Box<dyn Error>> {
+    let lines = reader.lines();
+    let mut front_matter = String::new();
+    let mut in_front_matter = false;
+    for line in lines {
+        let string = line?;
+        if string.as_str().trim() == "---" {
+            if in_front_matter {
+                break;
+            }
+            in_front_matter = true;
+            continue;
+        };
+        front_matter.push_str(&string);
+        front_matter.push('\n');
+    }
+    Ok(front_matter)
+}
+
+fn compute_metadata(buf: &str) -> Result<NotesFrontMatter, Box<dyn Error>> {
+    Ok(serde_yaml_ng::from_str::<NotesFrontMatter>(buf)?)
 }
 
 /// Computes counts for padding tags and name
@@ -114,20 +146,19 @@ fn compute_counts(
     mut namelen: usize,
     mut taglen: usize,
 ) -> Result<(usize, usize), Box<dyn Error>> {
-    let reader = BufReader::new(std::fs::File::open(path)?);
-    let vals = reader
-        .lines()
-        .skip(3)
-        .map(|v| v.ok().unwrap())
-        .collect::<String>();
-    let tags = vals
-        .split("- ")
-        .nth(1)
-        .unwrap_or_default()
-        .split_once(":")
-        .unwrap_or_default()
-        .1
-        .trim();
+    let mut reader = BufReader::new(std::fs::File::open(path)?);
+    let front_matter = fetch_front_matter(&mut reader)?;
+    let Metadata {
+        category: _,
+        tags,
+        created: _,
+        hidden,
+    } = compute_metadata(&front_matter)?.metadata;
+
+    if hidden {
+        return Ok((0, 0));
+    }
+
     let ncount = path
         .iter()
         .skip_while(|&p| p != "notes")
@@ -141,7 +172,13 @@ fn compute_counts(
         .count();
     let mut iter = path.iter();
     iter.next_back();
-    let tcount = tags.chars().count();
+    let tcount = if let Some(tags) = &tags {
+        tags.iter()
+            .fold(0, |sum, &tag| tag.chars().count() + 2 + sum)
+            - 1
+    } else {
+        0
+    };
     if namelen < ncount {
         namelen = ncount;
     }
@@ -177,8 +214,15 @@ fn max_name_and_tag_len(
                 *c = cat;
             }
         } else {
+            let path_str = path
+                .to_str()
+                .expect("An invalid UTF-8 sequence provided as a path");
             let (n, c) = max_len.get_or_insert_default();
-            (*n, *c) = compute_counts(&path, *n, *c)?;
+            if path_str.is_ascii() && &path_str[path_str.len() - 2..] == "md"
+                || &path_str.chars().rev().take(2).collect::<String>() == "md"
+            {
+                (*n, *c) = compute_counts(&path, *n, *c)?;
+            }
         }
     }
 
@@ -208,14 +252,32 @@ fn default_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
                 .unwrap()
         )?;
     } else {
-        writeln!(std::io::stdout(), "{}", dir.path().to_str().unwrap())?;
+        let path = dir.path();
+        let mut reader = BufReader::new(std::fs::File::open(&path)?);
+        let front_matter = fetch_front_matter(&mut reader)?;
+        let Metadata {
+            category: _,
+            tags: _,
+            created: _,
+            hidden,
+        } = compute_metadata(&front_matter)?.metadata;
+
+        if hidden {
+            return Ok(());
+        };
+
+        let path_str = path
+            .to_str()
+            .expect("An invalid UTF-8 sequence provided as a path");
+        writeln!(std::io::stdout(), "{}", path_str)?;
     }
     Ok(())
 }
 
 fn full_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
-    let reader = BufReader::new(std::fs::File::open(dir.path())?);
+    let mut reader = BufReader::new(std::fs::File::open(dir.path())?);
     let mut out = StandardStream::stdout(termcolor::ColorChoice::Always);
+    let path = dir.path();
     if std::io::stdout().is_terminal()
         && std::env::var("NOTES_HIDE_ROOT").is_ok_and(|s| s == "true")
     {
@@ -231,8 +293,7 @@ fn full_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
             out,
             colour = Color::Green,
             "{shortened_path}{}",
-            dir.path()
-                .to_str()
+            path.to_str()
                 .unwrap()
                 .split(system::DATA_DIR)
                 .last()
@@ -246,77 +307,94 @@ fn full_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
             dir.path().to_str().unwrap()
         );
     }
-    let mut lines = reader.lines();
-    let title = lines.next().ok_or("error")??;
-    let header = lines.next().ok_or("error")??;
+    let front_matter = fetch_front_matter(&mut reader)?;
+    let Metadata {
+        category,
+        tags,
+        created,
+        hidden,
+    } = compute_metadata(&front_matter)?.metadata;
 
-    for l in lines.by_ref().take(3) {
-        let st = l?;
-        let (header, content) = st
-            .split_once("- ")
-            .unwrap()
-            .1
-            .split_once(":")
-            .unwrap_or_default();
-        let gap = 8 - header.chars().count();
-        write_coloured!(out, bold_colour = Color::Yellow, "{}:", header);
+    if hidden {
+        return Ok(());
+    }
+
+    write_coloured!(out, bold_colour = Color::Yellow, "category:",);
+    if let Some(category) = &category {
         writeln!(
             out,
             "{:>gap$}",
-            content,
-            gap = if content.chars().count() > gap {
-                gap + content.chars().count()
-            } else {
-                gap
-            }
+            category,
+            gap = category.chars().count() + 1
         )?;
+    } else {
+        writeln!(out)?;
     }
-    writeln!(out, "\n{}", title)?;
-    writeln!(out, "{}", header)?;
+
+    write_coloured!(out, bold_colour = Color::Yellow, "tags:");
+    if let Some(tags) = &tags {
+        let tags = tags.join(",");
+        let count = tags.chars().count();
+        writeln!(out, "{:>gap$}", tags, gap = count + 5)?;
+    } else {
+        writeln!(out)?;
+    }
+
+    write_coloured!(out, bold_colour = Color::Yellow, "created:",);
+    writeln!(out, "{:>gap$}", created, gap = created.chars().count() + 2)?;
+
+    let lines = reader.lines();
     for l in lines {
         writeln!(out, "{}", l?)?;
     }
+
     writeln!(out)?;
     Ok(())
 }
 
 fn short_cb(dir: &DirEntry, nlen: usize, taglen: usize) -> Result<(), Box<dyn Error>> {
-    let reader = BufReader::new(std::fs::File::open(dir.path())?);
-    let vals = reader
-        .lines()
-        .take(5)
-        .map(|v| v.ok().unwrap())
-        .collect::<Vec<String>>();
+    let mut reader = BufReader::new(std::fs::File::open(dir.path())?);
+    let front_matter = fetch_front_matter(&mut reader)?;
+    let Metadata {
+        category,
+        tags,
+        created,
+        hidden,
+    } = compute_metadata(&front_matter)?.metadata;
+
+    if hidden {
+        return Ok(());
+    }
+
     let mut out = StandardStream::stdout(termcolor::ColorChoice::Always);
+
     let pbuf = dir.path();
     let mut iter = pbuf.iter();
     let file = iter.next_back();
-    let category = PathBuf::from_iter(iter.skip_while(|&p| p != "notes").skip(1));
-    write_coloured!(
-        out,
-        colour = Color::Green,
-        "/{}",
-        category.to_str().unwrap()
-    );
-    let has_category = !category.to_str().unwrap_or_default().is_empty();
-    let gap = nlen - category.to_str().unwrap().chars().count() - has_category as usize;
-    if has_category {
+
+    let mut gap = nlen;
+    if let Some(category) = category {
+        write_coloured!(out, colour = Color::Green, "/{}", category);
+        gap = nlen - category.chars().count();
         write_coloured!(out, bold, "/");
-    }
+    } else {
+        write_coloured!(out, colour = Color::Green, "/");
+        gap += 1
+    };
+
     write_coloured!(
         out,
         colour = Color::Yellow,
         "{:<gap$}",
         file.unwrap().to_str().unwrap(),
     );
-    let gap = taglen + 2;
-    write_coloured!(
-        out,
-        bold,
-        " {:<gap$}",
-        vals[3].split_once(":").unwrap().1.trim(),
-    );
 
-    write_colouredln!(out, bold, "{}", vals[4].split_once(":").unwrap().1.trim(),);
+    let gap = taglen + 2;
+    if let Some(tags) = tags {
+        write_coloured!(out, bold, " {:<gap$}", tags.join(","));
+    } else {
+        write!(out, " {:<gap$}", "")?;
+    }
+    write_colouredln!(out, bold, "{}", created);
     Ok(())
 }
