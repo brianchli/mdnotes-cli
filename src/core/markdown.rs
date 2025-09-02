@@ -61,8 +61,7 @@ impl<'a> File<'a> {
         }
     }
 
-    /// Creates and writes the Markdown file with the provided meta
-    /// data fields
+    /// Creates and writes the Markdown file with the provided metadata fields
     pub fn write(&self) -> Result<(), Box<dyn Error>> {
         let file = OpenOptions::new()
             .create_new(true)
