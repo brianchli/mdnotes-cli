@@ -193,14 +193,7 @@ fn max_name_and_tag_len(
     mut max_len: Option<(usize, usize)>,
     dir: &Path,
 ) -> Result<(usize, usize), Box<dyn Error>> {
-    if dir.is_file() {
-        let (n, c) = max_len.get_or_insert_default();
-        (*n, *c) = compute_counts(dir, *n, *c)?;
-        return Ok(*max_len.get_or_insert_default());
-    }
-
     assert!(dir.is_dir());
-
     for entry in std::fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
