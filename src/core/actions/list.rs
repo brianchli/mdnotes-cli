@@ -136,8 +136,8 @@ fn fetch_front_matter(reader: &mut BufReader<File>) -> Result<String, Box<dyn Er
     Ok(front_matter)
 }
 
-fn compute_metadata(buf: &str) -> Result<NotesFrontMatter, Box<dyn Error>> {
-    Ok(serde_yaml_ng::from_str::<NotesFrontMatter>(buf)?)
+fn compute_metadata<'a>(buf: &'a str) -> Result<Metadata<'a>, Box<dyn Error>> {
+    Ok(serde_yaml_ng::from_str::<NotesFrontMatter>(buf)?.metadata)
 }
 
 /// Computes counts for padding tags and name
@@ -153,7 +153,7 @@ fn compute_counts(
         tags,
         created: _,
         hidden,
-    } = compute_metadata(&front_matter)?.metadata;
+    } = compute_metadata(&front_matter)?;
 
     if hidden {
         return Ok((0, 0));
