@@ -214,7 +214,13 @@ fn max_name_and_tag_len(
             if path_str.is_ascii() && &path_str[path_str.len() - 2..] == "md"
                 || &path_str.chars().rev().take(2).collect::<String>() == "md"
             {
-                (*n, *c) = compute_counts(&path, *n, *c)?;
+                let (name, cat) = compute_counts(&path, *n, *c)?;
+                if *n < name {
+                    *n = name;
+                }
+                if *c < cat {
+                    *c = cat;
+                }
             }
         }
     }
