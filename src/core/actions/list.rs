@@ -136,7 +136,7 @@ fn fetch_front_matter(reader: &mut BufReader<File>) -> Result<String, Box<dyn Er
     Ok(front_matter)
 }
 
-fn compute_metadata<'a>(buf: &'a str) -> Result<Metadata<'a>, Box<dyn Error>> {
+fn compute_metadata(buf: &str) -> Result<Metadata, Box<dyn Error>> {
     Ok(serde_yaml_ng::from_str::<NotesFrontMatter>(buf)?.metadata)
 }
 
@@ -260,7 +260,7 @@ fn default_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
             tags: _,
             created: _,
             hidden,
-        } = compute_metadata(&front_matter)?.metadata;
+        } = compute_metadata(&front_matter)?;
 
         if hidden {
             return Ok(());
@@ -313,7 +313,7 @@ fn full_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
         tags,
         created,
         hidden,
-    } = compute_metadata(&front_matter)?.metadata;
+    } = compute_metadata(&front_matter)?;
 
     if hidden {
         return Ok(());
@@ -360,7 +360,7 @@ fn short_cb(dir: &DirEntry, nlen: usize, taglen: usize) -> Result<(), Box<dyn Er
         tags,
         created,
         hidden,
-    } = compute_metadata(&front_matter)?.metadata;
+    } = compute_metadata(&front_matter)?;
 
     if hidden {
         return Ok(());
