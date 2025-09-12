@@ -2,7 +2,7 @@ use std::io::{Write, stdout};
 
 use crate::system::{CONFIG_FILE, Configuration};
 
-use super::Command;
+use super::{Command, Commands};
 
 enum ConfigOption {
     Print(bool),
@@ -14,24 +14,20 @@ pub struct ConfigurationCommand<'a> {
 }
 
 impl<'a> Command<'a> for ConfigurationCommand<'a> {
-    fn new(
-        args: &'a clap::ArgMatches,
-        conf: &'a Configuration,
-    ) -> Result<Self, Box<dyn std::error::Error>>
+    fn new(args: Commands, conf: &'a Configuration) -> Result<Self, Box<dyn std::error::Error>>
     where
         Self: Sized,
     {
+        let Commands::Config { root } = args else {
+            unreachable!("Non-configuration command passed to config handler.");
+        };
         Ok(Self {
-            action: ConfigOption::Print(
-                *args
-                    .get_one::<bool>("path")
-                    .expect("flag is set to false by default"),
-            ),
+            action: ConfigOption::Print(root),
             configuration: conf,
         })
     }
 
-    fn execute(&self) -> Result<(), Box<dyn std::error::Error>> {
+    fn execute(self) -> Result<(), Box<dyn std::error::Error>> {
         // based on current implementation, this match is sufficient.
         // Refactors necessary when extending behaviour.
         let ConfigOption::Print(b) = self.action;

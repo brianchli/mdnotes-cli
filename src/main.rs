@@ -1,18 +1,19 @@
+use clap::Parser;
 use std::error::Error;
 
+mod cli;
 mod core;
-mod parser;
 mod system;
 
 fn main() -> Result<(), Box<dyn Error>> {
+
     let conf = system::notes_init()?;
-    let args = parser::cli().get_matches();
-    let command = parser::get_command(&args);
-    if let Err(err) = match command {
-        Some(("new", args)) => core::create(&conf, args),
-        Some(("list", args)) => core::list(&conf, args),
-        Some(("config", args)) => core::config(&conf, args),
-        _ => Ok(()),
+    let cli_args = cli::Cli::parse();
+
+    if let Err(err) = match &cli_args.commands {
+        cli::Commands::Create { .. } => core::create(&conf, cli_args.commands),
+        cli::Commands::List { .. } => core::list(&conf, cli_args.commands),
+        cli::Commands::Config { .. } => core::config(&conf, cli_args.commands),
     } {
         let Some(io_err) = err.downcast_ref::<std::io::Error>() else {
             return Err(err);

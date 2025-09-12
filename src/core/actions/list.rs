@@ -5,7 +5,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use clap::ArgMatches;
 use termcolor::{Color, ColorSpec, StandardStream, WriteColor};
 
 use crate::{
@@ -14,7 +13,7 @@ use crate::{
     write_coloured, write_colouredln,
 };
 
-use super::Command;
+use super::{Command, Commands};
 
 #[derive(Debug)]
 enum Details {
@@ -30,8 +29,18 @@ pub struct ListCommand {
 }
 
 impl Command<'_> for ListCommand {
-    fn new(args: &ArgMatches, conf: &Configuration) -> Result<Self, Box<dyn Error>> {
-        if args.get_one::<bool>("root").is_some_and(|&b| b) {
+    fn new(args: Commands, conf: &Configuration) -> Result<Self, Box<dyn Error>> {
+        let Commands::List {
+            root,
+            full,
+            short,
+            category,
+        } = args
+        else {
+            unreachable!("Non-list command passed to list handler.");
+        };
+
+        if root {
             return Ok(Self {
                 path: PathBuf::from(&conf.settings.path),
                 details: Details::Root,
@@ -46,14 +55,14 @@ impl Command<'_> for ListCommand {
         }
 
         // flags are represented as booleans and default to false
-        let details = if args.get_one("short").is_some_and(|&v| v) {
+        let details = if short {
             Details::Short
-        } else if args.get_one::<bool>("full").is_some_and(|&v| v) {
+        } else if full {
             Details::Full
         } else {
             Details::Default
         };
-        Ok(if let Some(cat) = args.get_one::<String>("category") {
+        Ok(if let Some(cat) = category {
             Self {
                 details,
                 path: PathBuf::from(format!("{}/{}", conf.settings.path, cat)),
@@ -66,7 +75,7 @@ impl Command<'_> for ListCommand {
         })
     }
 
-    fn execute(&self) -> Result<(), Box<dyn Error>> {
+    fn execute(self) -> Result<(), Box<dyn Error>> {
         match self.details {
             Details::Root => Ok(writeln!(
                 std::io::stdout(),
@@ -174,7 +183,7 @@ fn compute_counts(
     iter.next_back();
     let tcount = if let Some(tags) = &tags {
         tags.iter()
-            .fold(0, |sum, &tag| tag.chars().count() + 2 + sum)
+            .fold(0, |sum, tag| tag.chars().count() + 2 + sum)
             - 1
     } else {
         0

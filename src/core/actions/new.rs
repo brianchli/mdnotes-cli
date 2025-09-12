@@ -5,33 +5,39 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use clap::ArgMatches;
-
 use crate::core::markdown;
 
-use super::{Command, Configuration};
+use super::{Command, Commands, Configuration};
 const DEFAULT_EDITOR: &str = "vim";
 
 /// Representation of an edit command and the context
 /// needed for an edit command
 pub struct NewCommand<'a> {
-    name: &'a str,
+    name: String,
     path: PathBuf,
-    category: Option<&'a str>,
-    tags: Option<Vec<&'a str>>,
+    category: Option<String>,
+    tags: Option<Vec<String>>,
     editor: Option<&'a str>,
 }
 
 impl<'a> Command<'a> for NewCommand<'a> {
-    fn new(args: &'a ArgMatches, conf: &'a Configuration) -> Result<Self, Box<dyn Error>> {
+    fn new(args: Commands, conf: &'a Configuration) -> Result<Self, Box<dyn Error>> {
         // We always demand an argument name
-        let name = args.get_one::<String>("name").unwrap();
-        let category = args.get_one::<String>("category").map(|s| s.as_str());
-        let mut path = if let Some(category) = category {
+        let Commands::Create {
+            quiet,
+            category,
+            name,
+            tags,
+        } = args
+        else {
+            unreachable!("Non-create command provided to create handler.")
+        };
+
+        let mut path = if let Some(category) = &category {
             PathBuf::from(format!(
                 "{}/{}",
                 conf.settings.path,
-                validate_path(category)?
+                validate_path(category.as_str())?
             ))
         } else {
             PathBuf::from(&conf.settings.path)
@@ -39,46 +45,41 @@ impl<'a> Command<'a> for NewCommand<'a> {
 
         path.push(format!("{name}.md"));
 
-        let editor = args
-            .get_one::<bool>("quiet")
-            .is_some_and(|&b: &bool| !b)
-            .then(|| {
-                conf.settings
-                    .editor
-                    .as_deref()
-                    .or_else(|| {
-                        let mut vars = std::env::vars();
-                        let allowed_editors: fn((String, String)) -> Option<&'a str> =
-                            |(_, v)| match v.as_str() {
-                                "nvim" => Some("nvim"),
-                                "glow" => Some("glow"),
-                                _ => None,
-                            };
-                        vars.find(|(key, _)| key == "NOTES_EDITOR")
-                            .and_then(allowed_editors)
-                            .and_then(|s| {
-                                if s == "glow" && !vars.any(|(k, _)| k == "EDITOR") {
-                                    None
-                                } else {
-                                    Some(s)
-                                }
-                            })
-                    })
-                    .unwrap_or(DEFAULT_EDITOR)
-            });
+        let editor = quiet.then(|| {
+            conf.settings
+                .editor
+                .as_deref()
+                .or_else(|| {
+                    let mut vars = std::env::vars();
+                    let allowed_editors: fn((String, String)) -> Option<&'a str> =
+                        |(_, v)| match v.as_str() {
+                            "nvim" => Some("nvim"),
+                            "glow" => Some("glow"),
+                            _ => None,
+                        };
+                    vars.find(|(key, _)| key == "NOTES_EDITOR")
+                        .and_then(allowed_editors)
+                        .and_then(|s| {
+                            if s == "glow" && !vars.any(|(k, _)| k == "EDITOR") {
+                                None
+                            } else {
+                                Some(s)
+                            }
+                        })
+                })
+                .unwrap_or(DEFAULT_EDITOR)
+        });
 
         Ok(Self {
             name: validate_name(name)?,
             path,
             category,
-            tags: args
-                .get_many::<String>("tags")
-                .map(|s| s.map(|s| s.as_str()).collect()),
+            tags,
             editor,
         })
     }
 
-    fn execute(&self) -> Result<(), Box<dyn Error>> {
+    fn execute(self) -> Result<(), Box<dyn Error>> {
         // Create the category if it does not exist
         if self.category.is_some() {
             let parent = self
@@ -91,13 +92,13 @@ impl<'a> Command<'a> for NewCommand<'a> {
         }
 
         markdown::File::new(
-            self.name,
+            self.name.as_str(),
             self.path
                 .as_os_str()
                 .to_str()
                 .ok_or("a invalid path provided at creation")?,
-            self.category,
-            self.tags.as_deref(),
+            self.category.as_deref(),
+            self.tags,
         )
         .write()?;
 
@@ -114,7 +115,7 @@ impl<'a> Command<'a> for NewCommand<'a> {
 
 /// Validates that a filename is represented in the format
 /// <name>+([-]<name>+)?* of only ascii chars
-fn validate_name(name: &str) -> Result<&str, Box<dyn Error>> {
+fn validate_name(name: String) -> Result<String, Box<dyn Error>> {
     if let Some(p) = name.find(|c: char| !(c.is_alphabetic() && c < 128 as char || c == '-')) {
         let res = name.chars().try_fold((0usize, 0), |(idx, b), elem| {
             if b >= p {

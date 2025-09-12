@@ -8,20 +8,20 @@ pub struct File<'a> {
     name: &'a str,
     path: &'a str,
     category: Option<&'a str>,
-    tags: Option<&'a [&'a str]>,
+    tags: Option<Vec<String>>,
 }
 
 /// Representation of the yaml metadata field
 #[derive(Deserialize, Serialize, Debug)]
 pub(crate) struct Metadata<'a> {
     pub(crate) category: Option<&'a str>,
-    pub(crate) tags: Option<Vec<&'a str>>,
+    pub(crate) tags: Option<Vec<String>>,
     pub(crate) created: String,
     pub(crate) hidden: bool,
 }
 
 impl<'a> Metadata<'a> {
-    fn new(category: Option<&'a str>, tags: Option<Vec<&'a str>>, created: String) -> Self {
+    fn new(category: Option<&'a str>, tags: Option<Vec<String>>, created: String) -> Self {
         Self {
             category,
             tags,
@@ -39,7 +39,7 @@ pub(crate) struct NotesFrontMatter<'a> {
 }
 
 impl<'a> NotesFrontMatter<'a> {
-    fn new(category: Option<&'a str>, tags: Option<Vec<&'a str>>, created: String) -> Self {
+    fn new(category: Option<&'a str>, tags: Option<Vec<String>>, created: String) -> Self {
         Self {
             metadata: Metadata::new(category, tags, created),
         }
@@ -51,7 +51,7 @@ impl<'a> File<'a> {
         name: &'a str,
         path: &'a str,
         category: Option<&'a str>,
-        tags: Option<&'a [&'a str]>,
+        tags: Option<Vec<String>>,
     ) -> Self {
         Self {
             name,
@@ -62,7 +62,7 @@ impl<'a> File<'a> {
     }
 
     /// Creates and writes the Markdown file with the provided metadata fields
-    pub fn write(&self) -> Result<(), Box<dyn Error>> {
+    pub fn write(self) -> Result<(), Box<dyn Error>> {
         let file = OpenOptions::new()
             .create_new(true)
             .write(true)
@@ -72,7 +72,7 @@ impl<'a> File<'a> {
         let dt = Local::now().format("%d-%b-%Y %H:%M:%S %P %z");
         let value = NotesFrontMatter::new(
             self.category,
-            self.tags.map(|t| t.to_owned()),
+            self.tags,
             format!("{}", dt),
         );
 
