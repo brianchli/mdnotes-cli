@@ -238,6 +238,20 @@ fn max_name_and_tag_len(
 }
 
 fn default_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
+    let path = dir.path();
+    let mut reader = BufReader::new(std::fs::File::open(&path)?);
+    let front_matter = fetch_front_matter(&mut reader)?;
+    let NotesFrontMatter {
+        title: _,
+        date: _,
+        tags: _,
+        notes_metadata,
+    } = compute_metadata(&front_matter)?;
+
+    if notes_metadata.hidden {
+        return Ok(());
+    };
+
     if std::io::stdout().is_terminal()
         && std::env::var("NOTES_HIDE_ROOT").is_ok_and(|s| s == "true")
     {
@@ -260,20 +274,6 @@ fn default_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
                 .unwrap()
         )?;
     } else {
-        let path = dir.path();
-        let mut reader = BufReader::new(std::fs::File::open(&path)?);
-        let front_matter = fetch_front_matter(&mut reader)?;
-        let NotesFrontMatter {
-            title: _,
-            date: _,
-            tags: _,
-            notes_metadata,
-        } = compute_metadata(&front_matter)?;
-
-        if notes_metadata.hidden {
-            return Ok(());
-        };
-
         let path_str = path
             .to_str()
             .expect("An invalid UTF-8 sequence provided as a path");
@@ -286,6 +286,18 @@ fn full_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
     let mut reader = BufReader::new(std::fs::File::open(dir.path())?);
     let mut out = StandardStream::stdout(termcolor::ColorChoice::Always);
     let path = dir.path();
+    let front_matter = fetch_front_matter(&mut reader)?;
+    let NotesFrontMatter {
+        title: _,
+        date,
+        tags,
+        notes_metadata,
+    } = compute_metadata(&front_matter)?;
+
+    if notes_metadata.hidden {
+        return Ok(());
+    }
+
     if std::io::stdout().is_terminal()
         && std::env::var("NOTES_HIDE_ROOT").is_ok_and(|s| s == "true")
     {
@@ -314,17 +326,6 @@ fn full_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
             "{}",
             dir.path().to_str().unwrap()
         );
-    }
-    let front_matter = fetch_front_matter(&mut reader)?;
-    let NotesFrontMatter {
-        title: _,
-        date,
-        tags,
-        notes_metadata,
-    } = compute_metadata(&front_matter)?;
-
-    if notes_metadata.hidden {
-        return Ok(());
     }
 
     write_coloured!(out, bold_colour = Color::Yellow, "category:",);
