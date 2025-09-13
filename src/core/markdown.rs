@@ -15,17 +15,21 @@ pub struct File<'a> {
 #[derive(Deserialize, Serialize, Debug)]
 pub(crate) struct Metadata<'a> {
     pub(crate) category: Option<&'a str>,
-    pub(crate) tags: Option<Vec<String>>,
-    pub(crate) created: String,
+    pub(crate) subcategories: Option<Vec<String>>,
     pub(crate) hidden: bool,
 }
 
 impl<'a> Metadata<'a> {
-    fn new(category: Option<&'a str>, tags: Option<Vec<String>>, created: String) -> Self {
+    fn new(category: Option<&'a str>) -> Self {
         Self {
-            category,
-            tags,
-            created,
+            category: category.map(|s| s.split("/").take(1).next().unwrap()),
+            subcategories: category.map(|s| {
+                s.split("/")
+                    .skip(1)
+                    .map(|s| s.to_owned())
+                    .filter(|s| !s.is_empty())
+                    .collect()
+            }),
             hidden: false,
         }
     }
@@ -34,14 +38,26 @@ impl<'a> Metadata<'a> {
 /// Representation of the front matter at the top of each note
 #[derive(Deserialize, Serialize, Debug)]
 pub(crate) struct NotesFrontMatter<'a> {
+    pub(crate) title: &'a str,
+    pub(crate) date: String,
+    pub(crate) tags: Option<Vec<String>>,
     #[serde(borrow)]
-    pub(crate) metadata: Metadata<'a>,
+    // notes specific metadata
+    pub(crate) notes_metadata: Metadata<'a>,
 }
 
 impl<'a> NotesFrontMatter<'a> {
-    fn new(category: Option<&'a str>, tags: Option<Vec<String>>, created: String) -> Self {
+    fn new(
+        title: &'a str,
+        category: Option<&'a str>,
+        tags: Option<Vec<String>>,
+        date: String,
+    ) -> Self {
         Self {
-            metadata: Metadata::new(category, tags, created),
+            title,
+            tags,
+            date,
+            notes_metadata: Metadata::new(category),
         }
     }
 }
@@ -69,12 +85,10 @@ impl<'a> File<'a> {
             .open(self.path)?;
 
         let mut writer = std::io::BufWriter::new(file);
-        let dt = Local::now().format("%d-%b-%Y %H:%M:%S %P %z");
-        let value = NotesFrontMatter::new(
-            self.category,
-            self.tags,
-            format!("{}", dt),
-        );
+        let dt = Local::now().format("%Y-%m-%dT%H:%M:%S%:z");
+        let title = self.name.replace("-", " ");
+        let value =
+            NotesFrontMatter::new(title.as_str(), self.category, self.tags, format!("{}", dt));
 
         let metadata = serde_yaml_ng::to_string(&value)?;
         writer.write_all(b"---\n")?;

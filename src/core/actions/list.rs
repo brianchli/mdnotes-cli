@@ -8,7 +8,7 @@ use std::{
 use termcolor::{Color, ColorSpec, StandardStream, WriteColor};
 
 use crate::{
-    core::markdown::{Metadata, NotesFrontMatter},
+    core::markdown::NotesFrontMatter,
     system::{self, Configuration},
     write_coloured, write_colouredln,
 };
@@ -145,8 +145,8 @@ fn fetch_front_matter(reader: &mut BufReader<File>) -> Result<String, Box<dyn Er
     Ok(front_matter)
 }
 
-fn compute_metadata(buf: &str) -> Result<Metadata, Box<dyn Error>> {
-    Ok(serde_yaml_ng::from_str::<NotesFrontMatter>(buf)?.metadata)
+fn compute_metadata(buf: &str) -> Result<NotesFrontMatter, Box<dyn Error>> {
+    Ok(serde_yaml_ng::from_str::<NotesFrontMatter>(buf)?)
 }
 
 /// Computes counts for padding tags and name
@@ -157,14 +157,14 @@ fn compute_counts(
 ) -> Result<(usize, usize), Box<dyn Error>> {
     let mut reader = BufReader::new(std::fs::File::open(path)?);
     let front_matter = fetch_front_matter(&mut reader)?;
-    let Metadata {
-        category: _,
+    let NotesFrontMatter {
+        title: _,
+        date: _,
         tags,
-        created: _,
-        hidden,
+        notes_metadata,
     } = compute_metadata(&front_matter)?;
 
-    if hidden {
+    if notes_metadata.hidden {
         return Ok((0, 0));
     }
 
@@ -263,14 +263,14 @@ fn default_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
         let path = dir.path();
         let mut reader = BufReader::new(std::fs::File::open(&path)?);
         let front_matter = fetch_front_matter(&mut reader)?;
-        let Metadata {
-            category: _,
+        let NotesFrontMatter {
+            title: _,
+            date: _,
             tags: _,
-            created: _,
-            hidden,
+            notes_metadata,
         } = compute_metadata(&front_matter)?;
 
-        if hidden {
+        if notes_metadata.hidden {
             return Ok(());
         };
 
@@ -316,19 +316,19 @@ fn full_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
         );
     }
     let front_matter = fetch_front_matter(&mut reader)?;
-    let Metadata {
-        category,
+    let NotesFrontMatter {
+        title: _,
+        date,
         tags,
-        created,
-        hidden,
+        notes_metadata,
     } = compute_metadata(&front_matter)?;
 
-    if hidden {
+    if notes_metadata.hidden {
         return Ok(());
     }
 
     write_coloured!(out, bold_colour = Color::Yellow, "category:",);
-    if let Some(category) = &category {
+    if let Some(category) = &notes_metadata.category {
         writeln!(
             out,
             "{:>gap$}",
@@ -349,7 +349,7 @@ fn full_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
     }
 
     write_coloured!(out, bold_colour = Color::Yellow, "created:",);
-    writeln!(out, "{:>gap$}", created, gap = created.chars().count() + 2)?;
+    writeln!(out, "{:>gap$}", date, gap = date.chars().count() + 2)?;
 
     let lines = reader.lines();
     for l in lines {
@@ -363,14 +363,14 @@ fn full_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
 fn short_cb(dir: &DirEntry, nlen: usize, taglen: usize) -> Result<(), Box<dyn Error>> {
     let mut reader = BufReader::new(std::fs::File::open(dir.path())?);
     let front_matter = fetch_front_matter(&mut reader)?;
-    let Metadata {
-        category,
+    let NotesFrontMatter {
+        title: _,
+        date,
         tags,
-        created,
-        hidden,
+        notes_metadata,
     } = compute_metadata(&front_matter)?;
 
-    if hidden {
+    if notes_metadata.hidden {
         return Ok(());
     }
 
@@ -381,7 +381,7 @@ fn short_cb(dir: &DirEntry, nlen: usize, taglen: usize) -> Result<(), Box<dyn Er
     let file = iter.next_back();
 
     let mut gap = nlen;
-    if let Some(category) = category {
+    if let Some(category) = notes_metadata.category {
         write_coloured!(out, colour = Color::Green, "/{}", category);
         gap = nlen - category.chars().count();
         write_coloured!(out, bold, "/");
@@ -403,6 +403,6 @@ fn short_cb(dir: &DirEntry, nlen: usize, taglen: usize) -> Result<(), Box<dyn Er
     } else {
         write!(out, " {:<gap$}", "")?;
     }
-    write_colouredln!(out, bold, "{}", created);
+    write_colouredln!(out, bold, "{}", date);
     Ok(())
 }
