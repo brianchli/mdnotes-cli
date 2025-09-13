@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use termcolor::{Color, ColorSpec, StandardStream, WriteColor};
+use termcolor::{Color, StandardStream, WriteColor};
 
 use crate::{
     core::markdown::NotesFrontMatter,

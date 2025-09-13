@@ -1,5 +1,5 @@
 mod actions;
 mod markdown;
 
-pub mod utils;
+pub mod io;
 pub use actions::{create, list, config};
