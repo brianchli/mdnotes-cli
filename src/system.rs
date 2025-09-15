@@ -1,10 +1,32 @@
-use std::error::Error;
+use std::{error::Error, path::Path};
+
+use std::sync::LazyLock;
+
+static HOME: LazyLock<String> =
+    LazyLock::new(|| std::env::var("HOME").expect("no home directory is set"));
+
+pub static DATA_DIR: LazyLock<String> = LazyLock::new(|| {
+    Path::new(&*HOME)
+        .join(".local/share/notes")
+        .to_string_lossy()
+        .to_string()
+});
+
+pub static CONFIG_DIR: LazyLock<String> = LazyLock::new(|| {
+    Path::new(&*HOME)
+        .join(".config/notes")
+        .to_string_lossy()
+        .to_string()
+});
+
+pub static CONFIG_FILE: LazyLock<String> = LazyLock::new(|| {
+    Path::new(&*HOME)
+        .join(".config/notes/notes.toml")
+        .to_string_lossy()
+        .to_string()
+});
 
 use serde::{Deserialize, Serialize};
-
-pub const DATA_DIR: &str = concat!(std::env!("HOME"), "/.local/share/notes");
-const CONFIG_DIR: &str = concat!(std::env!("HOME"), "/.config/notes");
-pub const CONFIG_FILE: &str = concat!(std::env!("HOME"), "/.config/notes/notes.toml");
 
 #[derive(Deserialize, Serialize, Default)]
 #[allow(unused)]
@@ -27,7 +49,7 @@ pub(crate) struct Options {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            path: DATA_DIR.to_owned(),
+            path: (*DATA_DIR).to_owned(),
             editor: None,
         }
     }
@@ -44,13 +66,13 @@ pub fn notes_init() -> Result<Configuration, Box<dyn Error>> {
 /// Creates a valid configuration file representation on success
 /// or otherwise an error.
 fn configuration_init() -> Result<Configuration, Box<dyn Error>> {
-    if !std::fs::exists(CONFIG_FILE)? {
-        std::fs::create_dir_all(CONFIG_DIR)?;
+    if !std::fs::exists(Path::new(&*CONFIG_DIR))? {
+        std::fs::create_dir_all(&*CONFIG_DIR)?;
         let conf = Configuration::default();
         let toml = toml::to_string(&conf)?;
-        std::fs::write(CONFIG_FILE, &toml)?;
+        std::fs::write(&*CONFIG_FILE, &toml)?;
         return Ok(conf);
     };
-    let conf = std::fs::read_to_string(CONFIG_FILE)?;
+    let conf = std::fs::read_to_string(&*CONFIG_FILE)?;
     Ok(toml::from_str::<Configuration>(conf.as_ref())?)
 }

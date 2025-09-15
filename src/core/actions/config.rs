@@ -32,7 +32,7 @@ impl<'a> Command<'a> for ConfigurationCommand<'a> {
         // Refactors necessary when extending behaviour.
         let ConfigOption::Print(b) = self.action;
         if b {
-            writeln!(stdout(), "{}", CONFIG_FILE)?;
+            writeln!(stdout(), "{}", &*CONFIG_FILE)?;
         } else {
             println!(
                 r#"notes.toml

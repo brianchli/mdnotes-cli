@@ -285,7 +285,7 @@ fn default_handler(mut entries: BinaryHeap<ListEntry>) -> Result<(), Box<dyn Err
                     .path
                     .to_str()
                     .unwrap()
-                    .split(system::DATA_DIR)
+                    .split(&*system::DATA_DIR)
                     .last()
                     .unwrap()
             )?;
@@ -333,7 +333,7 @@ fn full_handler(mut entries: BinaryHeap<ListEntry>) -> Result<(), Box<dyn Error>
                     .path
                     .to_str()
                     .unwrap()
-                    .split(system::DATA_DIR)
+                    .split(&*system::DATA_DIR)
                     .last()
                     .unwrap()
             );
