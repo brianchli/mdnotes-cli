@@ -1,6 +1,6 @@
 mod config;
 mod list;
-mod new;
+mod create;
 
 use std::error::Error;
 
@@ -16,7 +16,7 @@ pub trait Command<'a> {
 }
 
 pub fn create(conf: &Configuration, args: Commands) -> Result<(), Box<dyn Error>> {
-    new::NewCommand::new(args, conf)?.execute()
+    create::CreateCommand::new(args, conf)?.execute()
 }
 
 pub fn list(conf: &Configuration, args: Commands) -> Result<(), Box<dyn Error>> {

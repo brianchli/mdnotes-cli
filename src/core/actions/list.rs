@@ -1,10 +1,12 @@
 use std::{
+    collections::{BinaryHeap, VecDeque},
     error::Error,
-    fs::{DirEntry, File},
+    fs::File,
     io::{BufRead, BufReader, IsTerminal, Write},
     path::{Path, PathBuf},
 };
 
+use chrono::{DateTime, Local};
 use termcolor::{Color, StandardStream, WriteColor};
 
 use crate::{
@@ -23,9 +25,42 @@ enum Details {
     Default,
 }
 
+struct ListEntry {
+    path: PathBuf,
+    frontmatter: NotesFrontMatter,
+    contents: BufReader<File>,
+}
+
+impl Eq for ListEntry {}
+
+impl Ord for ListEntry {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.frontmatter.date.cmp(&other.frontmatter.date).then(
+            self.frontmatter
+                .notes_metadata
+                .category
+                .cmp(&other.frontmatter.notes_metadata.category),
+        )
+    }
+}
+
+impl PartialOrd for ListEntry {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for ListEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.frontmatter.date == other.frontmatter.date
+            && self.frontmatter.notes_metadata.category == other.frontmatter.notes_metadata.category
+    }
+}
+
 pub struct ListCommand {
     path: PathBuf,
     details: Details,
+    entries: BinaryHeap<ListEntry>,
 }
 
 impl Command<'_> for ListCommand {
@@ -44,6 +79,7 @@ impl Command<'_> for ListCommand {
             return Ok(Self {
                 path: PathBuf::from(&conf.settings.path),
                 details: Details::Root,
+                entries: BinaryHeap::<ListEntry>::new(),
             });
         }
 
@@ -66,63 +102,41 @@ impl Command<'_> for ListCommand {
             Self {
                 details,
                 path: PathBuf::from(format!("{}/{}", conf.settings.path, cat)),
+                entries: BinaryHeap::<ListEntry>::new(),
             }
         } else {
             Self {
                 details,
                 path: PathBuf::from(&conf.settings.path),
+                entries: BinaryHeap::<ListEntry>::new(),
             }
         })
     }
 
-    fn execute(self) -> Result<(), Box<dyn Error>> {
-        match self.details {
-            Details::Root => Ok(writeln!(
+    fn execute(mut self) -> Result<(), Box<dyn Error>> {
+        if let Details::Root = &self.details {
+            return Ok(writeln!(
                 std::io::stdout(),
                 "{}",
                 self.path
                     .as_os_str()
                     .to_str()
                     .expect("only valid UTF-8 characters are used for the path in configuration")
-            )?),
-            Details::Default => Ok(walk_dir(&self.path, &default_cb)?),
-            Details::Full => Ok(walk_dir(&self.path, &full_cb)?),
-            Details::Short => {
-                let (namelen, taglen) = max_name_and_tag_len(None, &self.path)?;
-                let cb = |dir: &DirEntry| -> Result<(), Box<dyn Error>> {
-                    short_cb(dir, namelen, taglen)
-                };
-                Ok(walk_dir(&self.path, &cb)?)
-            }
+            )?);
         }
-    }
-}
 
-/// Walks the directory and applies the callback function.
-/// code snippet taken from std::fs::read_dir documentation.
-fn walk_dir(
-    dir: &Path,
-    cb: &impl Fn(&DirEntry) -> Result<(), Box<dyn Error>>,
-) -> Result<(), Box<dyn Error>> {
-    if dir.is_dir() {
-        for entry in std::fs::read_dir(dir)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_dir() {
-                walk_dir(&path, cb)?;
-            } else {
-                let path_str = path
-                    .to_str()
-                    .expect("Invalid UTF-8 sequence provided as path");
-                if path_str.is_ascii() && &path_str[path_str.len() - 2..] == "md"
-                    || path_str.chars().rev().take(2).collect::<String>() == "md"
-                {
-                    cb(&entry)?;
-                }
+        let (namelen, taglen) = root_bfs_walk(self.path, &mut self.entries)?;
+        match self.details {
+            Details::Short => {
+                short_handler(self.entries, namelen, taglen)?;
             }
-        }
+            Details::Full => full_handler(self.entries)?,
+            Details::Default => default_handler(self.entries)?,
+            _ => unreachable!(),
+        };
+
+        Ok(())
     }
-    Ok(())
 }
 
 /// Utility function for fetching the yaml front matter of a note
@@ -145,29 +159,72 @@ fn fetch_front_matter(reader: &mut BufReader<File>) -> Result<String, Box<dyn Er
     Ok(front_matter)
 }
 
-fn compute_metadata(buf: &str) -> Result<NotesFrontMatter, Box<dyn Error>> {
+/// Deserialises a str slice into frontmatter
+fn generate_frontmatter(buf: &str) -> Result<NotesFrontMatter, Box<dyn Error>> {
     Ok(serde_yaml_ng::from_str::<NotesFrontMatter>(buf)?)
 }
 
-/// Computes counts for padding tags and name
-fn compute_counts(
+/// Root directory traversal that populates the list entries queue and returns padding for tags
+/// and pathnames.
+fn root_bfs_walk(
+    root_path: PathBuf,
+    entries: &mut BinaryHeap<ListEntry>,
+) -> Result<(usize, usize), Box<dyn Error>> {
+    let mut dequeue = VecDeque::new();
+    let mut lengths: (usize, usize) = (0, 0);
+    dequeue.push_back(root_path);
+    while !dequeue.is_empty() {
+        let entry = dequeue
+            .pop_front()
+            .expect("invariant: rootpath not provided to root_bfs_walk");
+        for child in std::fs::read_dir(entry)? {
+            let child = child?;
+            let path = child.path();
+            if path.is_dir() {
+                dequeue.push_back(path);
+            } else {
+                let path_str = path
+                    .to_str()
+                    .expect("Invalid UTF-8 sequence provided as path");
+                if path_str.is_ascii() && &path_str[path_str.len() - 2..] == "md"
+                    || path_str.chars().rev().take(2).collect::<String>() == "md"
+                {
+                    let mut reader = BufReader::new(std::fs::File::open(&path)?);
+                    let frontmatter = fetch_front_matter(&mut reader)?;
+                    let new_entry = ListEntry {
+                        path,
+                        frontmatter: generate_frontmatter(&frontmatter)?,
+                        contents: reader,
+                    };
+                    let (namelen, taglen) = &mut lengths;
+                    (*namelen, *taglen) = compute_name_and_tag_widths(
+                        &new_entry.path,
+                        &new_entry.frontmatter,
+                        *namelen,
+                        *taglen,
+                    )?;
+                    if !new_entry.frontmatter.notes_metadata.hidden {
+                        entries.push(new_entry);
+                    }
+                }
+            }
+        }
+    }
+    Ok(lengths)
+}
+
+/// Computes padding size for tags and name
+fn compute_name_and_tag_widths(
     path: &Path,
+    frontmatter: &NotesFrontMatter,
     mut namelen: usize,
     mut taglen: usize,
 ) -> Result<(usize, usize), Box<dyn Error>> {
-    let mut reader = BufReader::new(std::fs::File::open(path)?);
-    let front_matter = fetch_front_matter(&mut reader)?;
-    let NotesFrontMatter {
-        title: _,
-        date: _,
-        tags,
-        notes_metadata,
-    } = compute_metadata(&front_matter)?;
-
-    if notes_metadata.hidden {
-        return Ok((0, 0));
+    if frontmatter.notes_metadata.hidden {
+        return Ok((namelen, taglen));
     }
 
+    const PAD: usize = 2;
     let ncount = path
         .iter()
         .skip_while(|&p| p != "notes")
@@ -181,9 +238,9 @@ fn compute_counts(
         .count();
     let mut iter = path.iter();
     iter.next_back();
-    let tcount = if let Some(tags) = &tags {
+    let tcount = if let Some(tags) = &frontmatter.tags {
         tags.iter()
-            .fold(0, |sum, tag| tag.chars().count() + 2 + sum)
+            .fold(0, |sum, tag| tag.chars().count() + PAD + sum)
             - 1
     } else {
         0
@@ -197,213 +254,195 @@ fn compute_counts(
     Ok((namelen, taglen))
 }
 
-/// Computes the maximum length of the name and tag strings
-fn max_name_and_tag_len(
-    mut max_len: Option<(usize, usize)>,
-    dir: &Path,
-) -> Result<(usize, usize), Box<dyn Error>> {
-    assert!(dir.is_dir());
-    for entry in std::fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_dir() {
-            let (name, cat) = max_name_and_tag_len(None, path.as_path()).unwrap();
-            let (n, c) = max_len.get_or_insert_default();
-            if *n < name {
-                *n = name;
+fn default_handler(mut entries: BinaryHeap<ListEntry>) -> Result<(), Box<dyn Error>> {
+    while let Some(entry) = entries.pop() {
+        let NotesFrontMatter {
+            title: _,
+            date: _,
+            tags: _,
+            notes_metadata,
+        } = &entry.frontmatter;
+
+        if notes_metadata.hidden {
+            continue;
+        }
+
+        if std::io::stdout().is_terminal()
+            && std::env::var("NOTES_HIDE_ROOT").is_ok_and(|s| s == "true")
+        {
+            let mut shortened_path = String::new();
+            let root_path_length = system::DATA_DIR.chars().count();
+            for (i, c) in system::DATA_DIR.chars().enumerate() {
+                if c == '/' && i != root_path_length - 1 {
+                    shortened_path.push(c);
+                    shortened_path.push(system::DATA_DIR.chars().nth(i + 1).unwrap());
+                }
             }
-            if *c < cat {
-                *c = cat;
-            }
+            writeln!(
+                std::io::stdout(),
+                "{shortened_path}{}",
+                entry
+                    .path
+                    .to_str()
+                    .unwrap()
+                    .split(system::DATA_DIR)
+                    .last()
+                    .unwrap()
+            )?;
         } else {
-            let path_str = path
+            let path_str = entry
+                .path
                 .to_str()
                 .expect("An invalid UTF-8 sequence provided as a path");
-            let (n, c) = max_len.get_or_insert_default();
-            if path_str.is_ascii() && &path_str[path_str.len() - 2..] == "md"
-                || &path_str.chars().rev().take(2).collect::<String>() == "md"
-            {
-                let (name, cat) = compute_counts(&path, *n, *c)?;
-                if *n < name {
-                    *n = name;
-                }
-                if *c < cat {
-                    *c = cat;
-                }
-            }
+            writeln!(std::io::stdout(), "{}", path_str)?;
         }
-    }
-
-    Ok(*max_len.get_or_insert_default())
-}
-
-fn default_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
-    let path = dir.path();
-    let mut reader = BufReader::new(std::fs::File::open(&path)?);
-    let front_matter = fetch_front_matter(&mut reader)?;
-    let NotesFrontMatter {
-        title: _,
-        date: _,
-        tags: _,
-        notes_metadata,
-    } = compute_metadata(&front_matter)?;
-
-    if notes_metadata.hidden {
-        return Ok(());
-    };
-
-    if std::io::stdout().is_terminal()
-        && std::env::var("NOTES_HIDE_ROOT").is_ok_and(|s| s == "true")
-    {
-        let mut shortened_path = String::new();
-        let root_path_length = system::DATA_DIR.chars().count();
-        for (i, c) in system::DATA_DIR.chars().enumerate() {
-            if c == '/' && i != root_path_length - 1 {
-                shortened_path.push(c);
-                shortened_path.push(system::DATA_DIR.chars().nth(i + 1).unwrap());
-            }
-        }
-        writeln!(
-            std::io::stdout(),
-            "{shortened_path}{}",
-            dir.path()
-                .to_str()
-                .unwrap()
-                .split(system::DATA_DIR)
-                .last()
-                .unwrap()
-        )?;
-    } else {
-        let path_str = path
-            .to_str()
-            .expect("An invalid UTF-8 sequence provided as a path");
-        writeln!(std::io::stdout(), "{}", path_str)?;
     }
     Ok(())
 }
 
-fn full_cb(dir: &DirEntry) -> Result<(), Box<dyn Error>> {
-    let mut reader = BufReader::new(std::fs::File::open(dir.path())?);
+fn full_handler(mut entries: BinaryHeap<ListEntry>) -> Result<(), Box<dyn Error>> {
     let mut out = StandardStream::stdout(termcolor::ColorChoice::Always);
-    let path = dir.path();
-    let front_matter = fetch_front_matter(&mut reader)?;
-    let NotesFrontMatter {
-        title: _,
-        date,
-        tags,
-        notes_metadata,
-    } = compute_metadata(&front_matter)?;
+    while let Some(entry) = entries.pop() {
+        let NotesFrontMatter {
+            title: _,
+            date,
+            tags,
+            notes_metadata,
+        } = &entry.frontmatter;
 
-    if notes_metadata.hidden {
-        return Ok(());
-    }
-
-    if std::io::stdout().is_terminal()
-        && std::env::var("NOTES_HIDE_ROOT").is_ok_and(|s| s == "true")
-    {
-        let mut shortened_path = String::new();
-        let root_path_length = system::DATA_DIR.chars().count();
-        for (i, c) in system::DATA_DIR.chars().enumerate() {
-            if c == '/' && i != root_path_length - 1 {
-                shortened_path.push(c);
-                shortened_path.push(system::DATA_DIR.chars().nth(i + 1).unwrap());
-            }
+        if notes_metadata.hidden {
+            continue;
         }
-        write_colouredln!(
-            out,
-            colour = Color::Green,
-            "{shortened_path}{}",
-            path.to_str()
-                .unwrap()
-                .split(system::DATA_DIR)
-                .last()
-                .unwrap()
-        );
-    } else {
-        write_colouredln!(
-            out,
-            colour = Color::Green,
-            "{}",
-            dir.path().to_str().unwrap()
-        );
-    }
 
-    write_coloured!(out, bold_colour = Color::Yellow, "category:",);
-    if let Some(category) = &notes_metadata.category {
+        if std::io::stdout().is_terminal()
+            && std::env::var("NOTES_HIDE_ROOT").is_ok_and(|s| s == "true")
+        {
+            let mut shortened_path = String::new();
+            let root_path_length = system::DATA_DIR.chars().count();
+            for (i, c) in system::DATA_DIR.chars().enumerate() {
+                if c == '/' && i != root_path_length - 1 {
+                    shortened_path.push(c);
+                    shortened_path.push(system::DATA_DIR.chars().nth(i + 1).unwrap());
+                }
+            }
+            write_colouredln!(
+                out,
+                colour = Color::Green,
+                "{shortened_path}{}",
+                entry
+                    .path
+                    .to_str()
+                    .unwrap()
+                    .split(system::DATA_DIR)
+                    .last()
+                    .unwrap()
+            );
+        } else {
+            write_colouredln!(
+                out,
+                colour = Color::Green,
+                "{}",
+                entry.path.to_str().unwrap()
+            );
+        }
+
+        const CATPAD: usize = 1;
+        const TAGPAD: usize = 5;
+        const DATEPAD: usize = 5;
+
+        write_coloured!(out, bold_colour = Color::Yellow, "category:",);
+        if let Some(category) = &notes_metadata.category {
+            writeln!(
+                out,
+                "{:>gap$}",
+                category,
+                gap = category.chars().count() + CATPAD
+            )?;
+        } else {
+            writeln!(out)?;
+        }
+
+        write_coloured!(out, bold_colour = Color::Yellow, "tags:");
+        if let Some(tags) = &tags {
+            let tags = tags.join(",");
+            let count = tags.chars().count();
+            writeln!(out, "{:>gap$}", tags, gap = count + TAGPAD)?;
+        } else {
+            writeln!(out)?;
+        }
+
+        write_coloured!(out, bold_colour = Color::Yellow, "date:",);
+        let dt: DateTime<Local> = date.parse()?;
+        let formatted_dt = dt.format("%d-%b-%Y %H:%M:%S %P %z").to_string();
         writeln!(
             out,
             "{:>gap$}",
-            category,
-            gap = category.chars().count() + 1
+            formatted_dt,
+            gap = formatted_dt.chars().count() + DATEPAD
         )?;
-    } else {
+
+        let lines = entry.contents.lines();
+        for l in lines {
+            writeln!(out, "{}", l?)?;
+        }
+
         writeln!(out)?;
     }
-
-    write_coloured!(out, bold_colour = Color::Yellow, "tags:");
-    if let Some(tags) = &tags {
-        let tags = tags.join(",");
-        let count = tags.chars().count();
-        writeln!(out, "{:>gap$}", tags, gap = count + 5)?;
-    } else {
-        writeln!(out)?;
-    }
-
-    write_coloured!(out, bold_colour = Color::Yellow, "created:",);
-    writeln!(out, "{:>gap$}", date, gap = date.chars().count() + 2)?;
-
-    let lines = reader.lines();
-    for l in lines {
-        writeln!(out, "{}", l?)?;
-    }
-
-    writeln!(out)?;
     Ok(())
 }
 
-fn short_cb(dir: &DirEntry, nlen: usize, taglen: usize) -> Result<(), Box<dyn Error>> {
-    let mut reader = BufReader::new(std::fs::File::open(dir.path())?);
-    let front_matter = fetch_front_matter(&mut reader)?;
-    let NotesFrontMatter {
-        title: _,
-        date,
-        tags,
-        notes_metadata,
-    } = compute_metadata(&front_matter)?;
-
-    if notes_metadata.hidden {
-        return Ok(());
-    }
-
+fn short_handler(
+    mut entries: BinaryHeap<ListEntry>,
+    nlen: usize,
+    taglen: usize,
+) -> Result<(), Box<dyn Error>> {
     let mut out = StandardStream::stdout(termcolor::ColorChoice::Always);
+    while let Some(entry) = entries.pop() {
+        let NotesFrontMatter {
+            title: _,
+            date,
+            tags,
+            notes_metadata,
+        } = &entry.frontmatter;
 
-    let pbuf = dir.path();
-    let mut iter = pbuf.iter();
-    let file = iter.next_back();
+        if notes_metadata.hidden {
+            continue;
+        }
 
-    let mut gap = nlen;
-    if let Some(category) = notes_metadata.category {
-        write_coloured!(out, colour = Color::Green, "/{}", category);
-        gap = nlen - category.chars().count();
-        write_coloured!(out, bold, "/");
-    } else {
-        write_coloured!(out, colour = Color::Green, "/");
-        gap += 1
-    };
+        let pbuf = entry.path;
+        let mut iter = pbuf.iter();
+        let file = iter.next_back();
 
-    write_coloured!(
-        out,
-        colour = Color::Yellow,
-        "{:<gap$}",
-        file.unwrap().to_str().unwrap(),
-    );
+        let mut gap = nlen;
+        if let Some(category) = &notes_metadata.category {
+            write_coloured!(out, colour = Color::Green, "/{}", category);
+            gap = nlen - category.chars().count();
+            write_coloured!(out, bold, "/");
+        } else {
+            write_coloured!(out, colour = Color::Green, "/");
+            gap += 1
+        };
 
-    let gap = taglen + 2;
-    if let Some(tags) = tags {
-        write_coloured!(out, bold, " {:<gap$}", tags.join(","));
-    } else {
-        write!(out, " {:<gap$}", "")?;
+        write_coloured!(
+            out,
+            colour = Color::Yellow,
+            "{:<gap$}",
+            file.unwrap().to_str().unwrap(),
+        );
+
+        let gap = taglen + 2;
+        if let Some(tags) = &tags {
+            write_coloured!(out, bold, " {:<gap$}", tags.join(","));
+        } else {
+            write!(out, " {:<gap$}", "")?;
+        }
+        let dt: DateTime<Local> = date.parse()?;
+        write_colouredln!(
+            out,
+            bold,
+            "{}",
+            dt.format("%d-%b-%Y %H:%M:%S %P %z").to_string()
+        );
     }
-    write_colouredln!(out, bold, "{}", date);
     Ok(())
 }

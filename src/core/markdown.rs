@@ -12,17 +12,17 @@ pub struct File<'a> {
 }
 
 /// Representation of the yaml metadata field
-#[derive(Deserialize, Serialize, Debug)]
-pub(crate) struct Metadata<'a> {
-    pub(crate) category: Option<&'a str>,
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]
+pub(crate) struct Metadata {
+    pub(crate) category: Option<String>,
     pub(crate) subcategories: Option<Vec<String>>,
     pub(crate) hidden: bool,
 }
 
-impl<'a> Metadata<'a> {
-    fn new(category: Option<&'a str>) -> Self {
+impl Metadata {
+    fn new(category: Option<&str>) -> Self {
         Self {
-            category: category.map(|s| s.split("/").take(1).next().unwrap()),
+            category: category.map(|s| s.split("/").take(1).next().unwrap().into()),
             subcategories: category.map(|s| {
                 s.split("/")
                     .skip(1)
@@ -36,20 +36,19 @@ impl<'a> Metadata<'a> {
 }
 
 /// Representation of the front matter at the top of each note
-#[derive(Deserialize, Serialize, Debug)]
-pub(crate) struct NotesFrontMatter<'a> {
-    pub(crate) title: &'a str,
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]
+pub(crate) struct NotesFrontMatter {
+    pub(crate) title: String,
     pub(crate) date: String,
     pub(crate) tags: Option<Vec<String>>,
-    #[serde(borrow)]
     // notes specific metadata
-    pub(crate) notes_metadata: Metadata<'a>,
+    pub(crate) notes_metadata: Metadata,
 }
 
-impl<'a> NotesFrontMatter<'a> {
-    fn new(
-        title: &'a str,
-        category: Option<&'a str>,
+impl NotesFrontMatter {
+    pub fn new(
+        title: String,
+        category: Option<&str>,
         tags: Option<Vec<String>>,
         date: String,
     ) -> Self {
@@ -85,10 +84,10 @@ impl<'a> File<'a> {
             .open(self.path)?;
 
         let mut writer = std::io::BufWriter::new(file);
+        // use ISO 8601 date time strings as lexicographical order represents chronological order
         let dt = Local::now().format("%Y-%m-%dT%H:%M:%S%:z");
         let title = self.name.replace("-", " ");
-        let value =
-            NotesFrontMatter::new(title.as_str(), self.category, self.tags, format!("{}", dt));
+        let value = NotesFrontMatter::new(title, self.category, self.tags, format!("{}", dt));
 
         let metadata = serde_yaml_ng::to_string(&value)?;
         writer.write_all(b"---\n")?;

@@ -12,7 +12,7 @@ const DEFAULT_EDITOR: &str = "vim";
 
 /// Representation of an edit command and the context
 /// needed for an edit command
-pub struct NewCommand<'a> {
+pub struct CreateCommand<'a> {
     name: String,
     path: PathBuf,
     category: Option<String>,
@@ -20,7 +20,7 @@ pub struct NewCommand<'a> {
     editor: Option<&'a str>,
 }
 
-impl<'a> Command<'a> for NewCommand<'a> {
+impl<'a> Command<'a> for CreateCommand<'a> {
     fn new(args: Commands, conf: &'a Configuration) -> Result<Self, Box<dyn Error>> {
         // We always demand an argument name
         let Commands::Create {
@@ -45,30 +45,34 @@ impl<'a> Command<'a> for NewCommand<'a> {
 
         path.push(format!("{name}.md"));
 
-        let editor = quiet.then(|| {
-            conf.settings
-                .editor
-                .as_deref()
-                .or_else(|| {
-                    let mut vars = std::env::vars();
-                    let allowed_editors: fn((String, String)) -> Option<&'a str> =
-                        |(_, v)| match v.as_str() {
-                            "nvim" => Some("nvim"),
-                            "glow" => Some("glow"),
-                            _ => None,
-                        };
-                    vars.find(|(key, _)| key == "NOTES_EDITOR")
-                        .and_then(allowed_editors)
-                        .and_then(|s| {
-                            if s == "glow" && !vars.any(|(k, _)| k == "EDITOR") {
-                                None
-                            } else {
-                                Some(s)
-                            }
-                        })
-                })
-                .unwrap_or(DEFAULT_EDITOR)
-        });
+        let editor = if !quiet {
+            Some(
+                conf.settings
+                    .editor
+                    .as_deref()
+                    .or_else(|| {
+                        let mut vars = std::env::vars();
+                        let allowed_editors: fn((String, String)) -> Option<&'a str> =
+                            |(_, v)| match v.as_str() {
+                                "nvim" => Some("nvim"),
+                                "glow" => Some("glow"),
+                                _ => None,
+                            };
+                        vars.find(|(key, _)| key == "NOTES_EDITOR")
+                            .and_then(allowed_editors)
+                            .and_then(|s| {
+                                if s == "glow" && !vars.any(|(k, _)| k == "EDITOR") {
+                                    None
+                                } else {
+                                    Some(s)
+                                }
+                            })
+                    })
+                    .unwrap_or(DEFAULT_EDITOR),
+            )
+        } else {
+            None
+        };
 
         Ok(Self {
             name: validate_name(name)?,

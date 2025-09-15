@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand, arg};
 
 #[derive(Subcommand, Debug)]
 pub(crate) enum Commands {
-    #[command(alias = "n", about = "Create a new note.")]
+    #[command(aliases = ["c", "n"], about = "Create a new note.")]
     Create {
         #[arg(long, help = "create a new note without opening for editing")]
         quiet: bool,
