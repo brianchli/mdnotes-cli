@@ -84,14 +84,12 @@ impl<'a> File<'a> {
             .open(self.path)?;
 
         let mut writer = std::io::BufWriter::new(file);
-        // use ISO 8601 date time strings as lexicographical order represents chronological order
-        let dt = Local::now().format("%Y-%m-%dT%H:%M:%S%:z");
         let title = self.name.replace("-", " ");
-        let value = NotesFrontMatter::new(title, self.category, self.tags, format!("{}", dt));
-
-        let metadata = serde_yaml_ng::to_string(&value)?;
+        let frontmatter =
+            NotesFrontMatter::new(title, self.category, self.tags, Local::now().to_rfc3339());
+        let frontmatter_str = serde_yaml_ng::to_string(&frontmatter)?;
         writer.write_all(b"---\n")?;
-        writer.write_all(metadata.as_bytes())?;
+        writer.write_all(frontmatter_str.as_bytes())?;
         writer.write_all(b"---\n\n")?;
 
         writer.write_all(self.name.as_bytes())?;
