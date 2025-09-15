@@ -13,6 +13,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         cli::Commands::Create { .. } => core::create(&conf, cli_args.commands),
         cli::Commands::List { .. } => core::list(&conf, cli_args.commands),
         cli::Commands::Config { .. } => core::config(&conf, cli_args.commands),
+        cli::Commands::Save { .. } => core::save(&conf, cli_args.commands),
     } {
         // handle broken pipe errors
         return if let Some(io_err) = err.downcast_ref::<std::io::Error>() {

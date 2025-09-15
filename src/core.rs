@@ -2,4 +2,4 @@ mod actions;
 mod markdown;
 
 pub mod io;
-pub use actions::{create, list, config};
+pub use actions::{create, list, config, save};

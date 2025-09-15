@@ -1,6 +1,7 @@
 mod config;
-mod list;
 mod create;
+mod list;
+mod save;
 
 use std::error::Error;
 
@@ -25,4 +26,8 @@ pub fn list(conf: &Configuration, args: Commands) -> Result<(), Box<dyn Error>> 
 
 pub fn config(conf: &Configuration, args: Commands) -> Result<(), Box<dyn Error>> {
     config::ConfigurationCommand::new(args, conf)?.execute()
+}
+
+pub fn save(conf: &Configuration, args: Commands) -> Result<(), Box<dyn Error>> {
+    save::SaveCommand::new(args, conf)?.execute()
 }
