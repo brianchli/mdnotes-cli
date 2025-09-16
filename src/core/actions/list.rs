@@ -98,6 +98,7 @@ impl Command<'_> for ListCommand {
         } else {
             Details::Default
         };
+
         Ok(if let Some(cat) = category {
             Self {
                 details,
@@ -412,8 +413,7 @@ fn short_handler(
             continue;
         }
 
-        let pbuf = entry.path;
-        let mut iter = pbuf.iter();
+        let mut iter = entry.path.iter();
         let file = iter.next_back();
 
         let mut gap = nlen;
@@ -440,12 +440,7 @@ fn short_handler(
             write!(out, " {:<gap$}", "")?;
         }
         let dt: DateTime<Local> = date.parse()?;
-        write_colouredln!(
-            out,
-            bold,
-            "{}",
-            dt.format("%d-%b-%Y %H:%M:%S %P %z").to_string()
-        );
+        write_colouredln!(out, bold, "{}", dt.format("%d-%b-%Y %H:%M:%S %P %z"));
     }
     Ok(())
 }
