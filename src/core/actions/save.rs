@@ -8,6 +8,7 @@ use super::{Command, Commands};
 
 pub struct SaveCommand<'a> {
     path: &'a Path,
+    #[allow(unused)]
     remote: bool,
 }
 
