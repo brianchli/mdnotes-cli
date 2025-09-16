@@ -172,11 +172,14 @@ fn root_bfs_walk(
 ) -> Result<(usize, usize), Box<dyn Error>> {
     let mut dequeue = VecDeque::new();
     let mut lengths: (usize, usize) = (0, 0);
-    dequeue.push_back(root_path);
-    while !dequeue.is_empty() {
-        let entry = dequeue
-            .pop_front()
-            .expect("invariant: rootpath not provided to root_bfs_walk");
+
+    // handle case where a non-existent path is created with the concatenation of the
+    // root path and a category.
+    if root_path.exists() {
+        dequeue.push_back(root_path);
+    }
+
+    while let Some(entry) = dequeue.pop_front() {
         for child in std::fs::read_dir(entry)? {
             let child = child?;
             let path = child.path();
