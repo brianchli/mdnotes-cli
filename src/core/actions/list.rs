@@ -418,8 +418,14 @@ fn short_handler(
 
         let mut gap = nlen;
         if let Some(category) = &notes_metadata.category {
-            write_coloured!(out, colour = Color::Green, "/{}", category);
             gap = nlen - category.chars().count();
+            write_coloured!(out, colour = Color::Green, "/{}", category);
+            if let Some(subcategories) = &notes_metadata.subcategories {
+                for s in subcategories {
+                    write_coloured!(out, colour = Color::Green, "/{}", s);
+                    gap -= s.chars().count() + 1;
+                }
+            }
             write_coloured!(out, bold, "/");
         } else {
             write_coloured!(out, colour = Color::Green, "/");
