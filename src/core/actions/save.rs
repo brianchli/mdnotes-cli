@@ -33,6 +33,10 @@ impl<'a> Command<'a> for SaveCommand<'a> {
             std::process::Command::new("git")
                 .args(["-C", self.path.to_str().unwrap(), "init"])
                 .status()?;
+            std::fs::write(
+                std::path::Path::new(self.path).join(".gitignore"),
+                ".DS_Store",
+            )?;
         }
 
         std::process::Command::new("git")

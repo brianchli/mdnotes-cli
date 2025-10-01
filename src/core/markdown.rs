@@ -1,6 +1,6 @@
 use std::{error::Error, fs::OpenOptions, io::Write};
 
-use chrono::Local;
+use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 
 /// Representation of a markdown file
@@ -84,7 +84,11 @@ impl<'a> File<'a> {
             .open(self.path)?;
 
         let mut writer = std::io::BufWriter::new(file);
-        let title = self.name.replace("-", " ");
+        let title = if DateTime::parse_from_rfc3339(self.name).is_ok() {
+            self.name.to_string()
+        } else {
+            self.name.replace("-", " ")
+        };
         let frontmatter =
             NotesFrontMatter::new(title, self.category, self.tags, Local::now().to_rfc3339());
         let frontmatter_str = serde_yaml_ng::to_string(&frontmatter)?;
