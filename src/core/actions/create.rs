@@ -120,7 +120,7 @@ impl<'a> Command<'a> for CreateCommand<'a> {
 /// Validates that a filename is represented in the format
 /// <name>+([-]<name>+)?* of only ascii chars
 fn validate_name(name: String) -> Result<String, Box<dyn Error>> {
-    if let Some(p) = name.find(|c: char| !(c.is_alphabetic() && c < 128 as char || c == '-')) {
+    if let Some(p) = name.find(|c: char| !(c.is_ascii() && c < 128 as char || c == '-')) {
         let res = name.chars().try_fold((0usize, 0), |(idx, b), elem| {
             if b >= p {
                 ControlFlow::Break((idx, b))?;
