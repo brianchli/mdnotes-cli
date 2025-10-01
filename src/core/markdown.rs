@@ -95,12 +95,6 @@ impl<'a> File<'a> {
         writer.write_all(b"---\n")?;
         writer.write_all(frontmatter_str.as_bytes())?;
         writer.write_all(b"---\n\n")?;
-
-        writer.write_all(self.name.as_bytes())?;
-        let divider = self.name.as_bytes().iter().map(|_| "=").collect::<String>();
-        writer.write_all(b"\n")?;
-        writer.write_all(divider.as_bytes())?;
-        writer.write_all(b"\n")?;
         writer.flush()?;
         Ok(())
     }
