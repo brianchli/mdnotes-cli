@@ -1,6 +1,6 @@
 # mdnotes-cli
 
-mdnotes-cli is a markdown based note taking app that is built entirely for my own workflows, with extensions and features based on what piques my curiosity at the current moment.
+mdnotes-cli is a markdown based note taking utility that is built based on my workflow, with extensions and features based on what piques my curiosity at the current moment.
 
 It is built with the intention to be used with other terminal commands and utilities such as [grep](https://www.gnu.org/savannah-checkouts/gnu/grep/manual/grep.html), [sed](https://www.gnu.org/software/sed/manual/sed.html) and [fzf](https://github.com/junegunn/fzf).
 
@@ -13,6 +13,6 @@ It is built with the intention to be used with other terminal commands and utili
 
 ## Roadmap
 Below is a list of features that I'm currently interested in implementing at some point:
-* [ ] Transition command line parsing from the [clap](https://github.com/clap-rs/clap) library to the [argh](https://github.com/adishavit/argh) library
+* [ ] Transition command line parsing from the [clap](https://github.com/clap-rs/clap) library to the [argh](https://github.com/google/argh) library
 * [ ] Implementation of a multi workspace system
-
+* [ ] Implementation of Daemon layer for note tagging and caching
