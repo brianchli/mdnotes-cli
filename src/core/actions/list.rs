@@ -18,11 +18,10 @@ use crate::{
 use super::{Command, Commands};
 
 #[derive(Debug)]
-enum Details {
+enum Opts {
     Root,
     Short,
     Full,
-    Default,
 }
 
 struct ListEntry {
@@ -59,7 +58,7 @@ impl PartialEq for ListEntry {
 
 pub struct ListCommand {
     path: PathBuf,
-    details: Details,
+    details: Option<Opts>,
     entries: BinaryHeap<ListEntry>,
 }
 
@@ -78,7 +77,7 @@ impl Command<'_> for ListCommand {
         if root {
             return Ok(Self {
                 path: PathBuf::from(&conf.settings.path),
-                details: Details::Root,
+                details: Some(Opts::Root),
                 entries: BinaryHeap::<ListEntry>::new(),
             });
         }
@@ -92,11 +91,11 @@ impl Command<'_> for ListCommand {
 
         // flags are represented as booleans and default to false
         let details = if short {
-            Details::Short
+            Some(Opts::Short)
         } else if full {
-            Details::Full
+            Some(Opts::Full)
         } else {
-            Details::Default
+            None
         };
 
         Ok(if let Some(cat) = category {
@@ -115,25 +114,22 @@ impl Command<'_> for ListCommand {
     }
 
     fn execute(mut self) -> Result<(), Box<dyn Error>> {
-        if let Details::Root = &self.details {
-            return Ok(writeln!(
-                std::io::stdout(),
-                "{}",
-                self.path
-                    .as_os_str()
-                    .to_str()
-                    .expect("only valid UTF-8 characters are used for the path in configuration")
-            )?);
-        }
-
-        let (namelen, taglen) = root_bfs_walk(self.path, &mut self.entries)?;
+        let (namelen, taglen) = root_bfs_walk(self.path.clone(), &mut self.entries)?;
         match self.details {
-            Details::Short => {
+            Some(Opts::Short) => {
                 short_handler(self.entries, namelen, taglen)?;
             }
-            Details::Full => full_handler(self.entries)?,
-            Details::Default => default_handler(self.entries)?,
-            _ => unreachable!(),
+            Some(Opts::Full) => full_handler(self.entries)?,
+            Some(Opts::Root) => {
+                return Ok(writeln!(
+                    std::io::stdout(),
+                    "{}",
+                    self.path.as_os_str().to_str().expect(
+                        "only valid UTF-8 characters are used for the path in configuration"
+                    )
+                )?);
+            }
+            None => default_handler(self.entries)?,
         };
 
         Ok(())
