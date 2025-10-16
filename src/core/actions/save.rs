@@ -27,6 +27,7 @@ impl<'a> Command<'a> for SaveCommand<'a> {
         })
     }
 
+    // FIXME: maybe don't spawn 5 processes just to use git at some point
     fn execute(self) -> Result<(), Box<dyn std::error::Error>> {
         // check to see if the repository has been initialised
         if !std::path::Path::new(self.path).join(".git").exists() {
@@ -52,6 +53,16 @@ impl<'a> Command<'a> for SaveCommand<'a> {
                 &format!("update notes: {}", Local::now().to_rfc3339()),
             ])
             .status()?;
+
+        if std::process::Command::new("git")
+            .args(["-C", self.path.to_str().unwrap(), "remote"])
+            .status()
+            .is_ok()
+        {
+            std::process::Command::new("git")
+                .args(["-C", self.path.to_str().unwrap(), "push"])
+                .status()?;
+        };
 
         Ok(())
     }
