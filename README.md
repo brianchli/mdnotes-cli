@@ -16,3 +16,4 @@ Below is a list of features that I'm currently interested in implementing at som
 * [ ] Transition command line parsing from the [clap](https://github.com/clap-rs/clap) library to the [argh](https://github.com/google/argh) library
 * [ ] Implementation of a multi workspace system
 * [ ] Implementation of Daemon layer for note tagging and caching
+* [ ] Custom error message implementation; potentially with [anyhow](https://docs.rs/anyhow/latest/anyhow/)
