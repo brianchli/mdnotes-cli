@@ -19,6 +19,9 @@ pub(crate) enum Commands {
         #[arg(long, conflicts_with_all = &["full", "short", "category"])]
         root: bool,
 
+        #[arg(long, conflicts_with_all = &["full", "short" ])]
+        categories: bool,
+
         #[arg(
             short,
             long,
@@ -35,7 +38,7 @@ pub(crate) enum Commands {
         )]
         short: bool,
 
-        #[arg(help = "category to filter by")]
+        #[arg(help = "match string to filter by")]
         category: Option<String>,
     },
 

@@ -1,5 +1,5 @@
 use std::{
-    collections::{BinaryHeap, VecDeque},
+    collections::{BinaryHeap, HashSet, VecDeque},
     error::Error,
     fs::File,
     io::{BufRead, BufReader, IsTerminal, Write},
@@ -17,11 +17,12 @@ use crate::{
 
 use super::{Command, Commands};
 
-#[derive(Debug)]
-enum Opts {
+#[derive(Clone, Debug, clap::ValueEnum)]
+pub enum Opts {
     Root,
     Short,
     Full,
+    Categories,
 }
 
 struct ListEntry {
@@ -58,6 +59,7 @@ impl PartialEq for ListEntry {
 
 pub struct ListCommand {
     path: PathBuf,
+    filter: Option<String>,
     details: Option<Opts>,
     entries: BinaryHeap<ListEntry>,
 }
@@ -69,6 +71,7 @@ impl Command<'_> for ListCommand {
             full,
             short,
             category,
+            categories,
         } = args
         else {
             unreachable!("Non-list command passed to list handler.");
@@ -77,7 +80,15 @@ impl Command<'_> for ListCommand {
         if root {
             return Ok(Self {
                 path: PathBuf::from(&conf.settings.path),
+                filter: category,
                 details: Some(Opts::Root),
+                entries: BinaryHeap::<ListEntry>::new(),
+            });
+        } else if categories {
+            return Ok(Self {
+                path: PathBuf::from(&conf.settings.path),
+                filter: category,
+                details: Some(Opts::Categories),
                 entries: BinaryHeap::<ListEntry>::new(),
             });
         }
@@ -98,26 +109,37 @@ impl Command<'_> for ListCommand {
             None
         };
 
-        Ok(if let Some(cat) = category {
-            Self {
-                details,
-                path: PathBuf::from(format!("{}/{}", conf.settings.path, cat)),
-                entries: BinaryHeap::<ListEntry>::new(),
-            }
-        } else {
-            Self {
-                details,
-                path: PathBuf::from(&conf.settings.path),
-                entries: BinaryHeap::<ListEntry>::new(),
-            }
+        Ok(Self {
+            details,
+            filter: category,
+            path: PathBuf::from(&conf.settings.path),
+            entries: BinaryHeap::<ListEntry>::new(),
         })
     }
 
     fn execute(mut self) -> Result<(), Box<dyn Error>> {
-        let (namelen, taglen) = root_bfs_walk(self.path.clone(), &mut self.entries)?;
+        let (namelen, taglen) = root_bfs_walk(&mut self)?;
         match self.details {
             Some(Opts::Short) => {
                 short_handler(self.entries, namelen, taglen)?;
+            }
+            Some(Opts::Categories) => {
+                let set = HashSet::<&str>::from_iter(
+                    self.entries
+                        .iter()
+                        .filter(|&p| !p.frontmatter.notes_metadata.hidden)
+                        .filter_map(|p| {
+                            p.frontmatter
+                                .notes_metadata
+                                .category
+                                .as_ref()
+                                .map(|s| s.as_ref())
+                        }),
+                );
+                for cat in set {
+                    writeln!(std::io::stdout(), "{}", cat)?;
+                }
+                return Ok(());
             }
             Some(Opts::Full) => full_handler(self.entries)?,
             Some(Opts::Root) => {
@@ -163,23 +185,14 @@ fn generate_frontmatter(buf: &str) -> Result<NotesFrontMatter, Box<dyn Error>> {
 
 /// Root directory traversal that populates the list entries queue and returns padding for tags
 /// and pathnames.
-fn root_bfs_walk(
-    root_path: PathBuf,
-    entries: &mut BinaryHeap<ListEntry>,
-) -> Result<(usize, usize), Box<dyn Error>> {
+fn root_bfs_walk(list: &mut ListCommand) -> Result<(usize, usize), Box<dyn Error>> {
     let mut dequeue = VecDeque::new();
     let mut lengths: (usize, usize) = (0, 0);
-
-    // handle case where a non-existent path is created with the concatenation of the
-    // root path and a category.
-    if root_path.exists() {
-        dequeue.push_back(root_path);
-    }
-
+    dequeue.push_back(list.path.clone());
     while let Some(entry) = dequeue.pop_front() {
         for child in std::fs::read_dir(entry)? {
             let child = child?;
-            let path = child.path();
+            let mut path = child.path();
             if path.is_dir() {
                 dequeue.push_back(path);
             } else {
@@ -189,6 +202,13 @@ fn root_bfs_walk(
                 if path_str.is_ascii() && &path_str[path_str.len() - 2..] == "md"
                     || path_str.chars().rev().take(2).collect::<String>() == "md"
                 {
+                    if let Some(cat) = &list.filter {
+                        path.set_extension("");
+                        if !path.to_str().unwrap().contains(cat) {
+                            continue;
+                        }
+                        path.set_extension("md");
+                    }
                     let mut reader = BufReader::new(std::fs::File::open(&path)?);
                     let frontmatter = fetch_front_matter(&mut reader)?;
                     let new_entry = ListEntry {
@@ -204,7 +224,7 @@ fn root_bfs_walk(
                         *taglen,
                     )?;
                     if !new_entry.frontmatter.notes_metadata.hidden {
-                        entries.push(new_entry);
+                        list.entries.push(new_entry);
                     }
                 }
             }
