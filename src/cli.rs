@@ -44,8 +44,8 @@ pub(crate) enum Commands {
 
     #[command(about = "Notes configuration.")]
     Config {
-        #[arg(help = "prints the notes configuration directory")]
-        root: bool,
+        #[arg(long, help = "prints the notes configuration directory")]
+        path: bool,
     },
 
     #[command(about = "Save notes locally and remotely with git")]

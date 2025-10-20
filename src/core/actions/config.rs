@@ -18,11 +18,11 @@ impl<'a> Command<'a> for ConfigurationCommand<'a> {
     where
         Self: Sized,
     {
-        let Commands::Config { root } = args else {
+        let Commands::Config { path } = args else {
             unreachable!("Non-configuration command passed to config handler.");
         };
         Ok(Self {
-            action: ConfigOption::Print(root),
+            action: ConfigOption::Print(path),
             configuration: conf,
         })
     }
