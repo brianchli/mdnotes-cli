@@ -19,7 +19,7 @@ pub(crate) enum Commands {
         #[arg(long, conflicts_with_all = &["full", "short", "category"])]
         root: bool,
 
-        #[arg(long, conflicts_with_all = &["full", "short" ])]
+        #[arg(long, conflicts_with_all = &["full", "short"])]
         categories: bool,
 
         #[arg(
