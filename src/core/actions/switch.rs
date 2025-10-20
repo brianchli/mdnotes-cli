@@ -48,6 +48,7 @@ impl<'a> Command<'a> for SwitchCommand<'a> {
         }
 
         std::fs::write(&notes_base, format!("notebook: {}", self.notebook))?;
+        println!("switched to notebook '{}'", self.notebook);
         Ok(())
     }
 }
