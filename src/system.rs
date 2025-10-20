@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::{error::Error, path::Path};
 
 use std::sync::LazyLock;
@@ -60,7 +61,7 @@ impl Default for Settings {
 /// * Notes configuration file.
 ///
 pub fn notes_init() -> Result<Configuration, Box<dyn Error>> {
-    configuration_init()
+    workspace_init(configuration_init()?)
 }
 
 /// Creates a valid configuration file representation on success
@@ -75,4 +76,33 @@ fn configuration_init() -> Result<Configuration, Box<dyn Error>> {
     };
     let conf = std::fs::read_to_string(&*CONFIG_FILE)?;
     Ok(toml::from_str::<Configuration>(conf.as_ref())?)
+}
+
+/// Resolves the notebook path and configures path in the configuration to point to the correct notebook
+fn workspace_init(mut conf: Configuration) -> Result<Configuration, Box<dyn Error>> {
+    let mut root = PathBuf::from(&conf.settings.path);
+    root.push(".notes");
+    if !root.try_exists()? {
+        std::fs::write(&root, "notebook: main".trim_end())?;
+        conf.settings.path += "/notebooks/main";
+        return Ok(conf);
+    }
+
+    let buf = std::fs::read_to_string(&root)?;
+    if buf.trim_end().is_empty() {
+        return Err(String::from("not within a notebook").into());
+    }
+
+    conf.settings.path += "/notebooks/";
+    let notebook = buf
+        .split_once("notebook: ")
+        .ok_or_else(|| String::from("not within a notebook"))?
+        .1
+        .trim_end();
+    conf.settings.path += notebook;
+    if !Path::new(&conf.settings.path).try_exists()? {
+        return Err(format!("Invalid notebook '{}' in .notes", notebook).into());
+    }
+
+    Ok(conf)
 }

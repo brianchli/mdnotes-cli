@@ -2,6 +2,7 @@ mod config;
 mod create;
 mod list;
 mod save;
+mod switch;
 
 use std::error::Error;
 
@@ -30,4 +31,8 @@ pub fn config(conf: &Configuration, args: Commands) -> Result<(), Box<dyn Error>
 
 pub fn save(conf: &Configuration, args: Commands) -> Result<(), Box<dyn Error>> {
     save::SaveCommand::new(args, conf)?.execute()
+}
+
+pub fn switch(conf: &Configuration, args: Commands) -> Result<(), Box<dyn Error>> {
+    switch::SwitchCommand::new(args, conf)?.execute()
 }

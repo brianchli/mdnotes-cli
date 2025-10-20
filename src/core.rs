@@ -3,4 +3,4 @@ mod markdown;
 mod frontmatter;
 
 pub mod io;
-pub use actions::{create, list, config, save};
+pub use actions::{create, list, config, save, switch};

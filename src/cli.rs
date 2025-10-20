@@ -2,10 +2,12 @@ use clap::{Parser, Subcommand, arg};
 
 #[derive(Subcommand, Debug)]
 pub(crate) enum Commands {
-    #[command(aliases = ["c", "n"], about = "Create a new note.")]
+    #[command(aliases = ["c", "n"], about = "Create a new note or notebook.")]
     Create {
         #[arg(long, help = "create a new note without opening for editing")]
         quiet: bool,
+        #[arg(long, help = "create a new notebook", conflicts_with_all =&["quiet", "category", "tags"])]
+        notebook: bool,
         #[arg(short, long, help = "set the category for the new note")]
         category: Option<String>,
         #[arg(help = "the title of the new note")]
@@ -14,7 +16,7 @@ pub(crate) enum Commands {
         tags: Option<Vec<String>>,
     },
 
-    #[command(alias = "ls", about = "List available notes.")]
+    #[command(alias = "ls", about = "List available notes in notebook.")]
     List {
         #[arg(long, conflicts_with_all = &["full", "short", "category"])]
         root: bool,
@@ -46,6 +48,14 @@ pub(crate) enum Commands {
     Config {
         #[arg(long, help = "prints the notes configuration directory")]
         path: bool,
+    },
+
+    #[command(about = "Switch to a different notebook.")]
+    Switch {
+        #[arg(long, short, help = "create the notebook if it does not exist")]
+        create: bool,
+        #[arg(help = "notebook to be switched to")]
+        notebook: String,
     },
 
     #[command(about = "Save notes locally and remotely with git")]
