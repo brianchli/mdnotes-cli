@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 use std::{error::Error, path::Path};
-
 use std::sync::LazyLock;
 
 static HOME: LazyLock<String> =

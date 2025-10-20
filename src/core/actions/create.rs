@@ -10,15 +10,9 @@ use crate::core::markdown;
 use super::{Command, Commands, Configuration};
 const DEFAULT_EDITOR: &str = "vim";
 
-enum Type {
-    Notebook,
-    Note,
-}
-
 /// Representation of an edit command and the context
 /// needed for an edit command
 pub struct CreateCommand<'a> {
-    filetype: Type,
     name: String,
     path: PathBuf,
     category: Option<String>,
@@ -34,22 +28,10 @@ impl<'a> Command<'a> for CreateCommand<'a> {
             category,
             name,
             tags,
-            notebook,
         } = args
         else {
             unreachable!("Non-create command provided to create handler.")
         };
-
-        if notebook {
-            return Ok(Self {
-                filetype: Type::Notebook,
-                path: Path::new(&conf.settings.path).parent().unwrap().join(&name),
-                name,
-                category: None,
-                tags: None,
-                editor: None,
-            });
-        }
 
         let mut path = if let Some(category) = &category {
             PathBuf::from(format!(
@@ -93,7 +75,6 @@ impl<'a> Command<'a> for CreateCommand<'a> {
         };
 
         Ok(Self {
-            filetype: Type::Note,
             name: validate_name(name)?,
             path,
             category,
@@ -103,20 +84,6 @@ impl<'a> Command<'a> for CreateCommand<'a> {
     }
 
     fn execute(self) -> Result<(), Box<dyn Error>> {
-        match self.filetype {
-            Type::Notebook => self.handle_notebook(),
-            Type::Note => self.handle_note(),
-        }
-    }
-}
-
-impl CreateCommand<'_> {
-    fn handle_notebook(self) -> Result<(), Box<dyn Error>> {
-        std::fs::create_dir_all(self.path)?;
-        Ok(())
-    }
-
-    fn handle_note(self) -> Result<(), Box<dyn Error>> {
         // Create the category if it does not exist
         if self.category.is_some() {
             let parent = self

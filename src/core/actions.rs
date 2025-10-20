@@ -1,6 +1,7 @@
 mod config;
 mod create;
 mod list;
+mod notebook;
 mod save;
 mod switch;
 
@@ -17,22 +18,20 @@ pub trait Command<'a> {
     fn execute(self) -> Result<(), Box<dyn Error>>;
 }
 
-pub fn create(conf: &Configuration, args: Commands) -> Result<(), Box<dyn Error>> {
-    create::CreateCommand::new(args, conf)?.execute()
-}
-
-pub fn list(conf: &Configuration, args: Commands) -> Result<(), Box<dyn Error>> {
-    list::ListCommand::new(args, conf)?.execute()
-}
-
-pub fn config(conf: &Configuration, args: Commands) -> Result<(), Box<dyn Error>> {
-    config::ConfigurationCommand::new(args, conf)?.execute()
-}
-
-pub fn save(conf: &Configuration, args: Commands) -> Result<(), Box<dyn Error>> {
-    save::SaveCommand::new(args, conf)?.execute()
-}
-
-pub fn switch(conf: &Configuration, args: Commands) -> Result<(), Box<dyn Error>> {
-    switch::SwitchCommand::new(args, conf)?.execute()
+pub fn new(conf: &Configuration, args: Commands) -> Result<(), Box<dyn Error>> {
+    match args {
+        Commands::Create { .. } => create::CreateCommand::new(args, conf)?.execute(),
+        Commands::List { .. } => list::ListCommand::new(args, conf)?.execute(),
+        Commands::Config { .. } => config::ConfigurationCommand::new(args, conf)?.execute(),
+        Commands::Switch { .. } => switch::SwitchCommand::new(args, conf)?.execute(),
+        Commands::Save { .. } => save::SaveCommand::new(args, conf)?.execute(),
+        Commands::Notebook { ref notebooks } => match notebooks {
+            crate::cli::Notebook::Create { .. } => {
+                notebook::CreateCommand::new(args, conf)?.execute()
+            }
+            crate::cli::Notebook::Remove { .. } => {
+                notebook::RemoveCommand::new(args, conf)?.execute()
+            }
+        },
+    }
 }

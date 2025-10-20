@@ -6,8 +6,6 @@ pub(crate) enum Commands {
     Create {
         #[arg(long, help = "create a new note without opening for editing")]
         quiet: bool,
-        #[arg(long, help = "create a new notebook", conflicts_with_all =&["quiet", "category", "tags"])]
-        notebook: bool,
         #[arg(short, long, help = "set the category for the new note")]
         category: Option<String>,
         #[arg(help = "the title of the new note")]
@@ -58,11 +56,26 @@ pub(crate) enum Commands {
         notebook: String,
     },
 
-    #[command(about = "Save notes locally and remotely with git")]
+    #[command(about = "Save notes locally and remotely with git.")]
     Save {
         #[arg(long, help = "Store commits and push to remote repository")]
         remote: bool,
     },
+
+    #[command(about = "Notebook operations and subcommands.")]
+    Notebook {
+        #[command(subcommand)]
+        notebooks: Notebook,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum Notebook {
+    #[command(about = "Create a notebook")]
+    Create { notebook: String },
+
+    #[command(aliases=&["rm"], about = "Remove a notebook")]
+    Remove { notebook: String },
 }
 
 #[derive(Parser, Debug)]
@@ -70,4 +83,10 @@ pub(crate) enum Commands {
 pub(crate) struct Cli {
     #[command(subcommand)]
     pub(crate) commands: Commands,
+}
+
+impl Cli {
+    pub fn parse_args() -> Self {
+        Self::parse()
+    }
 }
