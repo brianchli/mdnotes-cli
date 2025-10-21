@@ -20,7 +20,7 @@ impl Command<'_> for CreateCommand {
         Self: Sized,
     {
         let Commands::Notebook {
-            notebooks: Notebook::Create { notebook },
+            notebooks: Some(Notebook::Create { notebook }),
         } = args
         else {
             unreachable!("Non-notebook create command passed to create handler.");

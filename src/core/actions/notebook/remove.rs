@@ -22,7 +22,7 @@ impl Command<'_> for RemoveCommand {
         Self: Sized,
     {
         let Commands::Notebook {
-            notebooks: Notebook::Remove { notebook },
+            notebooks: Some(Notebook::Remove { notebook }),
         } = args
         else {
             unreachable!("Non-notebook remove command passed to remove handler.");

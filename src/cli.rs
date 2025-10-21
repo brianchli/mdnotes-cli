@@ -68,7 +68,7 @@ pub(crate) enum Commands {
     #[command(about = "Notebook operations and subcommands.")]
     Notebook {
         #[command(subcommand)]
-        notebooks: Notebook,
+        notebooks: Option<Notebook>,
     },
 }
 
