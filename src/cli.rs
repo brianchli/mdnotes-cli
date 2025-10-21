@@ -22,6 +22,9 @@ pub(crate) enum Commands {
         #[arg(long, conflicts_with_all = &["full", "short", "root"])]
         categories: bool,
 
+        #[arg(long, conflicts_with_all = &["full", "short", "root", "categories"])]
+        notebooks: bool,
+
         #[arg(
             short,
             long,

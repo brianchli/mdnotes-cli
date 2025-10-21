@@ -28,9 +28,8 @@ pub fn default(mut entries: BinaryHeap<ListEntry>) -> Result<(), Box<dyn Error>>
             continue;
         }
 
-        if std::io::stdout().is_terminal()
-            && std::env::var("NOTES_HIDE_ROOT").is_ok_and(|s| s == "true")
-        {
+        let mut stdout = std::io::stdout().lock();
+        if stdout.is_terminal() && std::env::var("NOTES_HIDE_ROOT").is_ok_and(|s| s == "true") {
             let mut shortened_path = String::new();
             let root_path_length = system::DATA_DIR.chars().count();
             for (i, c) in system::DATA_DIR.chars().enumerate() {
@@ -40,7 +39,7 @@ pub fn default(mut entries: BinaryHeap<ListEntry>) -> Result<(), Box<dyn Error>>
                 }
             }
             writeln!(
-                std::io::stdout(),
+                stdout,
                 "{shortened_path}{}",
                 entry
                     .path
@@ -55,7 +54,7 @@ pub fn default(mut entries: BinaryHeap<ListEntry>) -> Result<(), Box<dyn Error>>
                 .path
                 .to_str()
                 .expect("An invalid UTF-8 sequence provided as a path");
-            writeln!(std::io::stdout(), "{}", path_str)?;
+            writeln!(stdout, "{}", path_str)?;
         }
     }
     Ok(())

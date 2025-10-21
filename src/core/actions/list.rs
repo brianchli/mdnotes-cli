@@ -21,6 +21,7 @@ pub enum Opts {
     Root,
     Short,
     Full,
+    Notebooks,
     Categories,
 }
 
@@ -71,6 +72,7 @@ impl Command<'_> for ListCommand {
             short,
             category,
             categories,
+            notebooks,
         } = args
         else {
             unreachable!("Non-list command passed to list handler.");
@@ -88,6 +90,17 @@ impl Command<'_> for ListCommand {
                 path: PathBuf::from(&conf.settings.path),
                 filter: category,
                 details: Some(Opts::Categories),
+                entries: BinaryHeap::<ListEntry>::new(),
+            });
+        } else if notebooks {
+            return Ok(Self {
+                path: PathBuf::from(
+                    Path::new(&conf.settings.path)
+                        .parent()
+                        .ok_or("unable to fetch parent for list command")?,
+                ),
+                filter: category,
+                details: Some(Opts::Notebooks),
                 entries: BinaryHeap::<ListEntry>::new(),
             });
         }
@@ -117,6 +130,16 @@ impl Command<'_> for ListCommand {
     }
 
     fn execute(mut self) -> Result<(), Box<dyn Error>> {
+        let mut stdout = std::io::stdout().lock();
+        if let Some(Opts::Notebooks) = &self.details {
+            for child in std::fs::read_dir(&self.path)? {
+                let path = child?.file_name();
+                if !path.to_string_lossy().starts_with(".") {
+                    writeln!(stdout, "{}", path.to_string_lossy())?;
+                }
+            }
+            return Ok(());
+        };
         let (namelen, taglen) = root_bfs_walk(&mut self)?;
         match self.details {
             Some(Opts::Short) => {
@@ -125,7 +148,7 @@ impl Command<'_> for ListCommand {
             Some(Opts::Full) => handlers::full(self.entries)?,
             Some(Opts::Root) => {
                 return Ok(writeln!(
-                    std::io::stdout(),
+                    stdout,
                     "{}",
                     self.path.as_os_str().to_str().expect(
                         "only valid UTF-8 characters are used for the path in configuration"
@@ -146,11 +169,14 @@ impl Command<'_> for ListCommand {
                         }),
                 );
                 for cat in set {
-                    writeln!(std::io::stdout(), "{}", cat)?;
+                    writeln!(stdout, "{}", cat)?;
                 }
                 return Ok(());
             }
             None => handlers::default(self.entries)?,
+            Some(Opts::Notebooks) => {
+                // no opt
+            }
         };
 
         Ok(())
