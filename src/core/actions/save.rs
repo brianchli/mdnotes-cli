@@ -18,7 +18,7 @@ impl<'a> Command<'a> for SaveCommand<'a> {
         Self: Sized,
     {
         let Commands::Save { remote } = args else {
-            unreachable!("Non-configuration command passed to config handler.");
+            unreachable!("Non-save command passed to save handler.");
         };
 
         Ok(Self {
