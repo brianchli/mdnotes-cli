@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand, arg};
 
 #[derive(Subcommand, Debug)]
 pub(crate) enum Commands {
-    #[command(aliases = ["c", "n"], about = "Create a new note or notebook.")]
+    #[command(aliases = ["c", "n"], about = "Create a new note.")]
     Create {
         #[arg(long, help = "create a new note without opening for editing")]
         quiet: bool,
@@ -14,7 +14,7 @@ pub(crate) enum Commands {
         tags: Option<Vec<String>>,
     },
 
-    #[command(alias = "ls", about = "List available notes in notebook.")]
+    #[command(alias = "ls", about = "List available notes in note stack.")]
     List {
         #[arg(long, conflicts_with_all = &["full", "short", "category"])]
         root: bool,
@@ -23,7 +23,7 @@ pub(crate) enum Commands {
         categories: bool,
 
         #[arg(long, conflicts_with_all = &["full", "short", "root", "categories"])]
-        notebooks: bool,
+        stacks: bool,
 
         #[arg(
             short,
@@ -51,12 +51,12 @@ pub(crate) enum Commands {
         path: bool,
     },
 
-    #[command(about = "Switch to a different notebook.")]
+    #[command(about = "Switch to a different note stack.")]
     Switch {
-        #[arg(long, short, help = "create the notebook if it does not exist")]
+        #[arg(long, short, help = "create the note stack if it does not exist")]
         create: bool,
-        #[arg(help = "notebook to be switched to")]
-        notebook: String,
+        #[arg(help = "note stack to be switched to")]
+        stack: String,
     },
 
     #[command(about = "Save notes locally and remotely with git.")]
@@ -65,20 +65,20 @@ pub(crate) enum Commands {
         remote: bool,
     },
 
-    #[command(about = "Notebook operations and subcommands.")]
-    Notebook {
+    #[command(about = "Note stack operations and subcommands.")]
+    Stack {
         #[command(subcommand)]
-        notebooks: Option<Notebook>,
+        stack: Option<Stack>,
     },
 }
 
 #[derive(Subcommand, Debug)]
-pub enum Notebook {
-    #[command(about = "Create a notebook")]
-    Create { notebook: String },
+pub enum Stack {
+    #[command(about = "Create a notes stack")]
+    Create { stack: String },
 
-    #[command(aliases=&["rm"], about = "Remove a notebook")]
-    Remove { notebook: String },
+    #[command(aliases=&["rm"], about = "Remove a notes stack")]
+    Remove { stack: String },
 }
 
 #[derive(Parser, Debug)]

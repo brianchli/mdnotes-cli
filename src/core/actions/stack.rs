@@ -15,16 +15,16 @@ pub fn default(conf: &Configuration) -> Result<(), Box<dyn std::error::Error>> {
     let mut p = PathBuf::from(
         Path::new(&conf.settings.path)
             .parent()
-            .ok_or("unable to get path parent in notebook command")?
+            .ok_or("unable to get path parent in stack command")?
             .parent()
-            .ok_or("unable to get path parent in notebook command")?,
+            .ok_or("unable to get path parent in stack command")?,
     );
     p.push(".notes");
     let buf = std::fs::read_to_string(p)?;
     println!(
         "{}",
-        buf.split_once("notebook: ")
-            .ok_or("unable to get notebook from .notes in notebook command")?
+        buf.split_once("stack: ")
+            .ok_or("unable to get stack from .notes in stack command")?
             .1
             .trim_end()
     );

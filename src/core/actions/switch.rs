@@ -4,7 +4,7 @@ use super::{Command, Commands};
 
 pub struct SwitchCommand<'a> {
     path: &'a Path,
-    notebook: String,
+    stack: String,
     create: bool,
 }
 
@@ -16,13 +16,13 @@ impl<'a> Command<'a> for SwitchCommand<'a> {
     where
         Self: Sized,
     {
-        let Commands::Switch { notebook, create } = args else {
+        let Commands::Switch { stack, create } = args else {
             unreachable!("Non-switch command passed to switch handler.");
         };
 
         Ok(Self {
             path: Path::new(&conf.settings.path),
-            notebook,
+            stack,
             create,
         })
     }
@@ -30,25 +30,25 @@ impl<'a> Command<'a> for SwitchCommand<'a> {
     fn execute(self) -> Result<(), Box<dyn std::error::Error>> {
         let p = Path::new(&self.path);
         let mut notes_base = PathBuf::from(p.parent().unwrap().parent().unwrap());
-        let mut notebook_path = PathBuf::from(p.parent().unwrap());
+        let mut stack_path = PathBuf::from(p.parent().unwrap());
 
         notes_base.push(".notes");
-        notebook_path.push(&self.notebook);
+        stack_path.push(&self.stack);
 
-        if !self.create && !notebook_path.try_exists()? {
-            return Err(format!("invalid notebook '{}'", self.notebook).into());
+        if !self.create && !stack_path.try_exists()? {
+            return Err(format!("invalid note stack '{}'", self.stack).into());
         } else if self.create {
-            std::fs::create_dir_all(&notebook_path)?;
+            std::fs::create_dir_all(&stack_path)?;
         }
 
         let buf = std::fs::read_to_string(&notes_base)?;
-        if buf.split_once("notebook: ").unwrap().1 == self.notebook {
-            println!("already in notebook '{}'", self.notebook);
+        if buf.split_once("stack: ").unwrap().1 == self.stack {
+            println!("already in note stack '{}'", self.stack);
             return Ok(());
         }
 
-        std::fs::write(&notes_base, format!("notebook: {}", self.notebook))?;
-        println!("switched to notebook '{}'", self.notebook);
+        std::fs::write(&notes_base, format!("stack: {}", self.stack))?;
+        println!("switched to note stack '{}'", self.stack);
         Ok(())
     }
 }

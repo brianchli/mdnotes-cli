@@ -1,8 +1,8 @@
 mod config;
 mod create;
 mod list;
-mod notebook;
 mod save;
+mod stack;
 mod switch;
 
 use std::error::Error;
@@ -25,18 +25,18 @@ pub fn new(conf: &Configuration, args: Commands) -> Result<(), Box<dyn Error>> {
         Commands::Config { .. } => config::ConfigurationCommand::new(args, conf)?.execute(),
         Commands::Switch { .. } => switch::SwitchCommand::new(args, conf)?.execute(),
         Commands::Save { .. } => save::SaveCommand::new(args, conf)?.execute(),
-        Commands::Notebook { ref notebooks } => {
-            if let Some(notebook) = notebooks {
-                match notebook {
-                    crate::cli::Notebook::Create { .. } => {
-                        notebook::CreateCommand::new(args, conf)?.execute()
+        Commands::Stack { ref stack } => {
+            if let Some(stack) = stack {
+                match stack {
+                    crate::cli::Stack::Create { .. } => {
+                        stack::CreateCommand::new(args, conf)?.execute()
                     }
-                    crate::cli::Notebook::Remove { .. } => {
-                        notebook::RemoveCommand::new(args, conf)?.execute()
+                    crate::cli::Stack::Remove { .. } => {
+                        stack::RemoveCommand::new(args, conf)?.execute()
                     }
                 }
             } else {
-                notebook::default(conf)
+                stack::default(conf)
             }
         }
     }

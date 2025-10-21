@@ -10,14 +10,14 @@ It is built with the intention to be used with other terminal commands and utili
 *  `list` - list notes in the workspace
 *  `config` - configuration options
 *  `save` - save functionality that is a wrapper around git
-*  `switch` - move to a different context ('notebook') for note storage
-*  `notebook` - conduct operations on 'notebooks'
-    * create - create a new notebook
-    * remove - remove an existing notebook
+*  `switch` - move to a different collection of notes ('stacks')
+*  `stack` - conduct operations on 'stacks' of notes
+    * create - create a new note stack
+    * remove - remove an existing note stack 
 
 ## Roadmap
 Below is a list of features that I'm currently interested in implementing at some point:
 * [ ] Transition command line parsing from the [clap](https://github.com/clap-rs/clap) library to the [argh](https://github.com/google/argh) library
-* [x] Implementation of a multi ~~workspace~~ **notebook** system
+* [x] Implementation of a multi ~~workspace~~ note **stack** system
 * [ ] Implementation of Daemon layer for note tagging and caching
 * [ ] Custom error message implementation; potentially with [anyhow](https://docs.rs/anyhow/latest/anyhow/)

@@ -1,6 +1,6 @@
 use std::path::PathBuf;
-use std::{error::Error, path::Path};
 use std::sync::LazyLock;
+use std::{error::Error, path::Path};
 
 static HOME: LazyLock<String> =
     LazyLock::new(|| std::env::var("HOME").expect("no home directory is set"));
@@ -77,30 +77,30 @@ fn configuration_init() -> Result<Configuration, Box<dyn Error>> {
     Ok(toml::from_str::<Configuration>(conf.as_ref())?)
 }
 
-/// Resolves the notebook path and configures path in the configuration to point to the correct notebook
+/// Resolves the note stack path and configures path in the configuration to point to the correct note stack
 fn workspace_init(mut conf: Configuration) -> Result<Configuration, Box<dyn Error>> {
     let mut root = PathBuf::from(&conf.settings.path);
     root.push(".notes");
     if !root.try_exists()? {
-        std::fs::write(&root, "notebook: main".trim_end())?;
-        conf.settings.path += "/notebooks/main";
+        std::fs::write(&root, "stacks: main".trim_end())?;
+        conf.settings.path += "/stacks/main";
         return Ok(conf);
     }
 
     let buf = std::fs::read_to_string(&root)?;
     if buf.trim_end().is_empty() {
-        return Err(String::from("not within a notebook").into());
+        return Err(String::from("not within a note stack").into());
     }
 
-    conf.settings.path += "/notebooks/";
-    let notebook = buf
-        .split_once("notebook: ")
-        .ok_or_else(|| String::from("not within a notebook"))?
+    conf.settings.path += "/stacks/";
+    let stack = buf
+        .split_once("stack: ")
+        .ok_or_else(|| String::from("not within a note stack"))?
         .1
         .trim_end();
-    conf.settings.path += notebook;
+    conf.settings.path += stack;
     if !Path::new(&conf.settings.path).try_exists()? {
-        return Err(format!("Invalid notebook '{}' in .notes", notebook).into());
+        return Err(format!("Invalid notes stack'{}' in .notes", stack).into());
     }
 
     Ok(conf)

@@ -21,7 +21,7 @@ pub enum Opts {
     Root,
     Short,
     Full,
-    Notebooks,
+    Stacks,
     Categories,
 }
 
@@ -72,7 +72,7 @@ impl Command<'_> for ListCommand {
             short,
             category,
             categories,
-            notebooks,
+            stacks,
         } = args
         else {
             unreachable!("Non-list command passed to list handler.");
@@ -92,7 +92,7 @@ impl Command<'_> for ListCommand {
                 details: Some(Opts::Categories),
                 entries: BinaryHeap::<ListEntry>::new(),
             });
-        } else if notebooks {
+        } else if stacks {
             return Ok(Self {
                 path: PathBuf::from(
                     Path::new(&conf.settings.path)
@@ -100,7 +100,7 @@ impl Command<'_> for ListCommand {
                         .ok_or("unable to fetch parent for list command")?,
                 ),
                 filter: category,
-                details: Some(Opts::Notebooks),
+                details: Some(Opts::Stacks),
                 entries: BinaryHeap::<ListEntry>::new(),
             });
         }
@@ -131,7 +131,7 @@ impl Command<'_> for ListCommand {
 
     fn execute(mut self) -> Result<(), Box<dyn Error>> {
         let mut stdout = std::io::stdout().lock();
-        if let Some(Opts::Notebooks) = &self.details {
+        if let Some(Opts::Stacks) = &self.details {
             for child in std::fs::read_dir(&self.path)? {
                 let path = child?.file_name();
                 if !path.to_string_lossy().starts_with(".") {
@@ -174,7 +174,7 @@ impl Command<'_> for ListCommand {
                 return Ok(());
             }
             None => handlers::default(self.entries)?,
-            Some(Opts::Notebooks) => {
+            Some(Opts::Stacks) => {
                 // no opt
             }
         };
