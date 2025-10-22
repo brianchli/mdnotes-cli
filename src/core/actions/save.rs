@@ -54,10 +54,12 @@ impl<'a> Command<'a> for SaveCommand<'a> {
             ])
             .status()?;
 
-        if std::process::Command::new("git")
+        if !std::process::Command::new("git")
             .args(["-C", self.path.to_str().unwrap(), "remote"])
-            .status()
-            .is_ok()
+            .output()?
+            .stdout
+            .to_vec()
+            .is_empty()
         {
             std::process::Command::new("git")
                 .args(["-C", self.path.to_str().unwrap(), "push"])
