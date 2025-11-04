@@ -2,12 +2,17 @@
 name = "notes"
 version = "0.1.0"
 edition = "2024"
+build = "build.rs"
 
 [dependencies]
 chrono = "0.4.40"
 clap = { version = "4.5.37", features = ["derive"] }
+clap_complete = "4.5.60"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_yaml_ng = "0.10.0"
 termcolor = "1.4.1"
 toml = "0.8.20"
 
+[build-dependencies]
+clap = { version = "4.5.37", features = ["derive"] }
+clap_complete = "*"
